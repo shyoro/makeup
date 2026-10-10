@@ -1,0 +1,9 @@
+{
+  "name": "@makeup/studio",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Sanity Studio and schema. Owned by sanity-agent in Wave 2.",
+  "scripts": {
+    "typecheck": "echo 'no studio code yet' && exit 0"
+  }
+}

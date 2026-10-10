@@ -1,0 +1,60 @@
+/* Import order is load-bearing.
+   1. Tailwind, so @theme can extend it.
+   2. fonts, so the @font-face families exist before anything references them.
+   3. theme-default, so --role-* primitives exist.
+   4. theme-contract LAST: it maps roles onto the utility vocabulary via
+      `@theme inline`, which resolves var() references at USE time. This
+      ordering constraint is binding on THIS file (theme-contract.css also
+      restates it as a constraint on itself), so it is recorded here too,
+      at the site that would silently break if violated.
+   Wave 2 swaps line 3 for a different theme file. Nothing else changes.
+
+   Tailwind v4's DEFAULT automatic source detection scans every non-ignored
+   file it can find, walking outward from this stylesheet — including
+   `web/src/config.ts` and `web/astro.config.mjs`, not just component
+   markup. Its candidate extractor treats every word in a scanned file as a
+   class candidate with no awareness of prose vs. markup, so plain English
+   words and identifiers generated real utilities that shipped to
+   production despite naming nothing any component uses: the word
+   "absolute" in a config.ts comment and `absoluteUrl` produced
+   `.absolute{position:absolute}`; astro.config.mjs's `output: 'static'`
+   produced `.static{position:static}`. An earlier version of this file
+   additionally used `@source "../../../tests/wave1"` to pull the
+   Playwright specs into the scan, which made the same problem worse (test
+   prose like the word "absolute" in a test title), but removing that
+   directive alone does NOT fix the leak — the config/source files inside
+   web/ are scanned by default regardless.
+
+   Fixed by disabling automatic detection entirely (`source(none)`) and
+   declaring, explicitly, the only two kinds of thing Tailwind may scan for
+   candidates:
+
+     1. The glob below (`*.astro`, `*.md`, `*.mdx`) — real page/component
+        markup and content, where `class="..."` legitimately lives.
+        Deliberately excludes `.ts`/`.tsx`: TypeScript source is exactly
+        where the original leak came from (`web/src/config.ts`'s prose and
+        `absoluteUrl` identifier), so it stays out of the scan on purpose.
+        A class that must originate from a `.ts`/`.tsx` file (rather than
+        markup) does NOT get its own glob entry — add it to the
+        `@source inline(...)` safelist below instead.
+     2. The `@source inline(...)` safelist — the contract's declared
+        utility inventory. This is the only guarantee that the contract's
+        vocabulary exists independent of whatever markup currently exists;
+        it does not depend on any component actually using these classes.
+
+   Both are real sources of truth for different things: the safelist
+   guarantees the CONTRACT's vocabulary always generates; the glob is what
+   lets a real component's classes generate at all. Neither makes the
+   other redundant, and neither makes new leaks impossible — prose inside
+   any SCANNED file type (including `.astro` frontmatter/comments, and now
+   `.md`/`.mdx` body text) can still produce an accidental utility the
+   same way `.absolute`/`.static` did; this is why the glob is deliberately
+   narrow rather than "everything under web/", not a guarantee that it can
+   never happen again. When a later agent adds a role or a new breakpoint
+   variant to the contract, add its class name to the inline list too. */
+@import 'tailwindcss' source(none);
+@source "../**/*.{astro,md,mdx}";
+@source inline("bg-{surface,surface-raised,accent} text-{ink,ink-muted,on-accent} border-hairline font-{display,ui} rounded-card py-section aspect-{hero,portrait,editorial,avatar} md:hidden lg:hidden xl:hidden 2xl:hidden");
+@import './fonts.css';
+@import './theme-default.css';
+@import './theme-contract.css';

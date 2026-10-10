@@ -1,0 +1,105 @@
+/* ============================================================================
+   FROZEN CONTRACT — do not change the locked values below.
+   Owned by Wave 1.
+
+   What later agents MAY do:
+     - ADD a new semantic role or utility, PROVIDED its value is a
+       `var(--role-*)` indirection to a primitive supplied by theme-*.css —
+       never a literal. Writing `--color-gold: #d4af37` directly in this
+       file, even as an "addition", reintroduces exactly the raw-hex
+       problem this contract exists to remove. A legitimate addition looks
+       like `--color-gold: var(--role-gold);`, with `--role-gold` defined
+       in theme-*.css.
+
+   What later agents MAY NOT do:
+     - Change any breakpoint or aspect-ratio value below.
+     - Remove or narrow `--breakpoint-*: initial`, `--color-*: initial`, or
+       `--font-*: initial`. These clear Tailwind's own default palette,
+       font stack, and breakpoint scale before this file installs the
+       locked replacements. Deleting one of these `initial` lines silently
+       re-admits Tailwind's full default vocabulary alongside the
+       contract's — e.g. removing `--color-*: initial` means `bg-red-500`
+       and every other Tailwind default color utility work again, right
+       next to `bg-surface`. tests/wave1/tokens.spec.ts DOES assert the
+       breakpoint scale is cleared (it checks `sm:`, `xl:`, and `2xl:` are
+       absent), so removing `--breakpoint-*: initial` is caught; nothing
+       in this repo currently asserts that Tailwind's default COLORS or
+       FONTS are absent, so removing `--color-*: initial` or
+       `--font-*: initial` is not.
+     - Move this file out of last position in web/src/styles/global.css's
+       import order. `@theme inline` resolves each `var(--role-*)`
+       reference at use time using whatever theme-*.css was imported
+       before it; importing theme-contract.css before theme-default.css
+       (or any other theme-*.css) breaks that resolution. global.css
+       documents this ordering constraint too, but it is restated here
+       because it is a constraint ON this file, not just a note about it.
+
+   Two layers, per spec section 6:
+     primitives      --role-*   supplied by the imported theme-*.css
+     semantic tokens the @theme block below, which is ALSO the utility vocabulary
+
+   `@theme inline` is what makes the indirection work: the var() reference
+   resolves at USE time, so swapping theme-*.css swaps every utility at once.
+   Because @theme generates the utilities, `bg-surface` and `text-ink` are
+   the INTENDED and only SUPPORTED way for a component to reach for a color
+   or font — not a mechanically unbreakable one. Tailwind's arbitrary-value
+   utilities (`bg-[#ff0000]`, `text-[#0f0]`, `font-[Comic_Sans]`,
+   `p-[13px]`) and inline `style="color:#f00"` bypass every namespace
+   cleared in this file; clearing `--color-*`/`--font-*` removes the
+   convenient path, not the escape hatch. A repo-level guard closing that
+   escape hatch (rejecting `[...]` arbitrary values and inline `style=` on
+   raw colors/fonts/spacing) is Task 7's job, not this file's — this file
+   is the vocabulary, Task 7 is the enforcement.
+   ============================================================================ */
+
+@theme inline {
+  /* --- breakpoints: clear Tailwind's defaults, install the locked two ---
+     Base is 0–767px and is unprefixed. Mobile is the primary target.
+     --breakpoint-*: initial MUST come before the --breakpoint-md/-lg lines:
+     order matters inside @theme. This clears Tailwind's default sm/md/lg/
+     xl/2xl (40rem/48rem/64rem/80rem/96rem) and installs exactly two. */
+  --breakpoint-*: initial;
+  --breakpoint-md: 48rem; /* 768px  tablet / small laptop */
+  --breakpoint-lg: 80rem; /* 1280px desktop */
+
+  /* --- colors: semantic roles only ------------------------------------- */
+  --color-*: initial;
+  --color-surface: var(--role-surface);
+  --color-surface-raised: var(--role-surface-raised);
+  --color-ink: var(--role-ink);
+  --color-ink-muted: var(--role-ink-muted);
+  --color-accent: var(--role-accent);
+  --color-on-accent: var(--role-on-accent);
+  --color-hairline: var(--role-hairline);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* --- type roles ------------------------------------------------------- */
+  --font-*: initial;
+  --font-display: var(--role-font-display);
+  --font-ui: var(--role-font-ui);
+
+  /* --- radii and section rhythm ----------------------------------------- */
+  --radius-card: var(--role-radius-card);
+  --spacing-section: var(--role-space-section);
+
+  /* --- LOCKED aspect ratios --------------------------------------------
+     Changing these after the client uploads a library means she re-crops
+     every image. Sanity hotspot/crop means one upload serves all four. */
+  --aspect-hero: 16 / 9;
+  --aspect-portrait: 4 / 5;
+  --aspect-editorial: 3 / 2;
+  --aspect-avatar: 1 / 1;
+}
+
+/* Motion budget. Every animated component must honour this. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@makeup/worker",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Cloudflare Worker: /api/chat and /api/contact. Owned by worker-agent in Wave 2.",
+  "scripts": {
+    "typecheck": "echo 'no worker code yet' && exit 0"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "makeup",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "web",
+    "worker",
+    "studio"
+  ],
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "typecheck": "npm run typecheck -w web",
+    "test:hooks": "sh tests/hooks/leak-hook.test.sh",
+    "test:lint-guards": "sh tests/lint/lint-guards.test.sh",
+    "test:wave1": "playwright test tests/wave1",
+    "test:e2e": "playwright test tests/wave1",
+    "lint": "eslint . && sh scripts/lint-guards.sh && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^10.10.0",
+    "eslint-plugin-astro": "^3.1.0",
+    "prettier": "^3.9.6",
+    "prettier-plugin-astro": "^1.0.0",
+    "typescript-eslint": "^8.70.0"
+  }
+}

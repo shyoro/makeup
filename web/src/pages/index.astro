@@ -1,0 +1,21 @@
+---
+// Wave 1 placeholder. assembly-agent becomes sole owner in Wave 4.
+import RootLayout from '../layouts/RootLayout.astro';
+---
+
+<RootLayout title="בנייה" description="האתר בבנייה">
+  <main class="px-6 py-section">
+    <!-- mt-4 is a plain Tailwind default utility, deliberately NOT in
+         global.css's @source inline() safelist. Its presence here is what
+         tests/wave1/tokens.spec.ts's "source glob picks up real component
+         markup" test depends on to prove the ../**/*.{astro,md,mdx} glob
+         in global.css actually resolves, rather than every utility in the
+         build coming from the safelist alone. Do not remove without
+         updating that test. -->
+    <h1 class="font-display text-4xl md:text-6xl mt-4">שלום עולם</h1>
+    <p class="text-ink-muted max-w-prose">
+      טקסט לדוגמה בעברית לבדיקת כיווניות, ניקוד וספרות מעורבות:
+      <span dir="ltr">052-1234567</span>, מחיר <span dir="ltr">450 ₪</span>.
+    </p>
+  </main>
+</RootLayout>

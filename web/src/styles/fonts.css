@@ -1,0 +1,223 @@
+/* Self-hosted font subsets from Fontsource. No Google Fonts request at
+   runtime, so no third-party connection and no consent question.
+
+   Two subsets per family, per weight: `hebrew` and `latin`. Hebrew-only
+   was wrong — Fontsource's own hebrew unicode-range covers only Hebrew
+   script and a few punctuation marks; every ASCII digit and Latin letter
+   (prices like ₪350, phone numbers, dates, brand names like Instagram)
+   falls outside it and would render in the browser's fallback sans-serif
+   instead, mixing two typefaces inside one run of text. The `latin` face
+   below covers exactly that gap. unicode-range values are copied verbatim
+   from each package's own generated index.css (e.g.
+   node_modules/@fontsource/assistant/index.css) rather than guessed, and
+   are identical across all four families.
+
+   The @fontsource/* scope (used here) ships ONLY static per-weight files
+   — no package in this scope has a variable-font file, contrary to an
+   earlier, incorrect assumption (that assumption came from guessing a
+   filename shape from a different family's convention; it sent the
+   search to the wrong npm scope). Variable faces for all four of these
+   families DO exist, but under a separate scope, @fontsource-variable/*,
+   which is not installed here. Verified for Frank Ruhl Libre: the two
+   static hebrew files used below (400 + 700 normal) are 6684 + 6864 =
+   13548 bytes (~13.6 KB) combined, vs. 18748 bytes (~18.7 KB) for
+   @fontsource-variable/frank-ruhl-libre's single hebrew variable file
+   covering the full weight axis — installed temporarily to measure, then
+   removed. Two static weights is the lighter choice here, not just the
+   simpler one. Consequence: only weight 400 and 700 exist for any of
+   these four families. A future design direction that wants, say, a 500
+   or 600 display weight must switch that family to
+   @fontsource-variable/<name> instead of adding more static weight files
+   here. */
+
+@font-face {
+  font-family: 'Assistant';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/assistant/files/assistant-hebrew-400-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Assistant';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/assistant/files/assistant-latin-400-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Assistant';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/assistant/files/assistant-hebrew-700-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Assistant';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/assistant/files/assistant-latin-700-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Frank Ruhl Libre';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/frank-ruhl-libre/files/frank-ruhl-libre-hebrew-400-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Frank Ruhl Libre';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/frank-ruhl-libre/files/frank-ruhl-libre-latin-400-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Frank Ruhl Libre';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/frank-ruhl-libre/files/frank-ruhl-libre-hebrew-700-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Frank Ruhl Libre';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/frank-ruhl-libre/files/frank-ruhl-libre-latin-700-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/heebo/files/heebo-hebrew-400-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/heebo/files/heebo-latin-400-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/heebo/files/heebo-hebrew-700-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/heebo/files/heebo-latin-700-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Noto Serif Hebrew';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/noto-serif-hebrew/files/noto-serif-hebrew-hebrew-400-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Noto Serif Hebrew';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/noto-serif-hebrew/files/noto-serif-hebrew-latin-400-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Noto Serif Hebrew';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/noto-serif-hebrew/files/noto-serif-hebrew-hebrew-700-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: 'Noto Serif Hebrew';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/noto-serif-hebrew/files/noto-serif-hebrew-latin-700-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}

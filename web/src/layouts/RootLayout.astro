@@ -1,0 +1,27 @@
+---
+import { NOINDEX } from '../config';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {/* On the temporary workers.dev origin. seo-agent owns the full head in
+        Wave 2; this line is the minimum that must never be forgotten. */}
+    {NOINDEX && <meta name="robots" content="noindex, nofollow" />}
+  </head>
+  <body class="bg-surface text-ink font-ui antialiased">
+    <slot />
+  </body>
+</html>

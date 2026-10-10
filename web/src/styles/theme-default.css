@@ -1,0 +1,18 @@
+/* Placeholder primitives so the contract resolves and the build is testable.
+   Wave 2's design-system-agent replaces every value below with one of three
+   real directions. The *names* are the contract; the values are not. */
+:root {
+  --role-surface: oklch(0.98 0.005 60);
+  --role-surface-raised: oklch(1 0 0);
+  --role-ink: oklch(0.22 0.01 60);
+  --role-ink-muted: oklch(0.52 0.01 60);
+  --role-accent: oklch(0.58 0.09 20);
+  --role-on-accent: oklch(0.99 0 0);
+  --role-hairline: oklch(0.89 0.005 60);
+
+  --role-font-display: 'Frank Ruhl Libre', serif;
+  --role-font-ui: 'Assistant', sans-serif;
+
+  --role-radius-card: 0.5rem;
+  --role-space-section: 4rem;
+}

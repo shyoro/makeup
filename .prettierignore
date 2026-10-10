@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.astro/
+package-lock.json
+playwright-report/
+test-results/
+
+# The design spec and implementation plan under docs/ (and any other
+# markdown in the repo, e.g. .superpowers/) are authority documents.
+# Prettier reflowing prose/markdown tables would silently rewrite content
+# whose exact wording and layout carry meaning. Markdown is documentation,
+# not code the formatter needs to settle style disputes over.
+**/*.md

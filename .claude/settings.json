@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(npm run test:hooks)",
+      "Bash(npm run test:lint-guards)",
+      "Bash(npm run test:wave1)",
+      "Bash(npm run test:e2e)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff --stat)",
+      "Bash(git diff HEAD)",
+      "Bash(git diff --stat HEAD)",
+      "Bash(git log)",
+      "Bash(git log --oneline)"
+    ],
+    "deny": []
+  }
+}

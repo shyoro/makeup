@@ -1,0 +1,24 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+.astro/
+.wrangler/
+.output/
+playwright-report/
+test-results/
+.DS_Store
+
+# Editor / IDE
+.idea/
+.claude/launch.json
+
+# Agent skill installs (symlinked into .claude/skills/)
+.agents/
+skills-lock.json
+.claude/skills/*
+!.claude/skills/brand-he/
+
+# Local tooling scratch
+*.db

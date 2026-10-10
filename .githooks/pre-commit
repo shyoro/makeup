@@ -1,0 +1,178 @@
+#!/bin/sh
+# Leak guard. This repository is PUBLIC and permanent: anything committed
+# survives deletion via forks and caches.
+#
+# Blocks secrets, ALL email addresses, generic credential assignments, and
+# staged binary image files (client photography must live in Sanity, never
+# in this repo). Blocking every email address means the client's address
+# never has to be written down here in order to be protected.
+#
+# To commit a deliberate content match, put the marker  leak-ok  on the same
+# line. Every line exempted this way is echoed to stderr as
+# "leak-ok exemption: ..." so the bypass is visible in the commit output,
+# not silent.
+#
+# A staged binary/image file cannot carry a leak-ok marker (it's a path
+# check, not a content check). Its own escape is the environment variable
+# ALLOW_BINARY=1, for the single commit that legitimately needs one (a
+# favicon, say).
+#
+# Set SCAN_STDIN=1 to scan stdin as content instead of the git index.
+# Set SCAN_PATHS=1 to scan stdin as a newline list of paths instead of the
+# git index. Both are used by the tests.
+set -eu
+
+# description<TAB>extended-regex
+PATTERNS=$(cat <<'EOF'
+OpenAI-style key	sk-[A-Za-z0-9]{16,}
+Resend API key	re_[A-Za-z0-9]{16,}
+Google API key	AIza[A-Za-z0-9_-]{30,}
+Sanity auth token	sk[A-Za-z0-9]{40,}
+email address	[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}
+credential assignment	([Aa][Pp][Ii]_[Tt][Oo][Kk][Ee][Nn]|[Aa][Pp][Ii]-[Tt][Oo][Kk][Ee][Nn]|[Aa][Pp][Ii][Kk][Ee][Yy]|[Aa][Pp][Ii]_[Kk][Ee][Yy]|[Aa][Cc][Cc][Ee][Ss][Ss]_[Tt][Oo][Kk][Ee][Nn]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]|[Bb][Ee][Aa][Rr][Ee][Rr])[[:space:]]*[:=][[:space:]]*[^A-Za-z0-9_-]?[A-Za-z0-9_-]{20,}
+EOF
+)
+
+# Extensions that must never be committed as client photography. Matched
+# case-insensitively against the lowercased path.
+BINARY_EXT_RE='\.(jpg|jpeg|png|webp|avif|heic|heif|tif|tiff|gif|bmp|psd|raw|cr2|nef|arw)$'
+
+SIGNAL="${TMPDIR:-/tmp}/leakguard.$$"
+PATH_HITS="${TMPDIR:-/tmp}/leakguard-paths.$$"
+rm -f "$SIGNAL" "$PATH_HITS"
+
+scan_content() {
+  RAW_CONTENT="$1"
+
+  # Announce every leak-ok exemption before filtering it out, so a bypass is
+  # visible in the commit output rather than silent.
+  printf '%s\n' "$RAW_CONTENT" | grep 'leak-ok' 2>/dev/null | while IFS= read -r EXEMPT_LINE; do
+    printf 'leak-ok exemption: %s\n' "$EXEMPT_LINE" >&2
+  done || true
+
+  FILTERED=$(printf '%s\n' "$RAW_CONTENT" | grep -v 'leak-ok' || true)
+
+  printf '%s\n' "$PATTERNS" | while IFS="$(printf '\t')" read -r DESC RE; do
+    [ -n "${RE:-}" ] || continue
+    HITS=$(printf '%s\n' "$FILTERED" | grep -nE "$RE" || true)
+    if [ -n "$HITS" ]; then
+      printf 'BLOCKED: %s\n' "$DESC" >&2
+      printf '%s\n' "$HITS" | sed 's/^/  /' >&2
+      echo "$DESC" >> "$SIGNAL"
+    fi
+  done
+}
+
+# Checks a single staged path against the blocked extension list and
+# records a hit. Shared by the newline-based scan_paths() (used by the
+# unit tests) and the NUL-based git-mode loop below (used for real
+# commits), so both go through identical matching logic.
+check_one_path() {
+  P="$1"
+  [ -n "$P" ] || return 0
+  LOW=$(printf '%s' "$P" | tr '[:upper:]' '[:lower:]')
+  if printf '%s\n' "$LOW" | grep -qE "$BINARY_EXT_RE"; then
+    printf '%s\n' "$P" >> "$PATH_HITS"
+  fi
+}
+
+# Reports whatever check_one_path() has accumulated in PATH_HITS.
+finish_path_scan() {
+  if [ -f "$PATH_HITS" ]; then
+    printf 'BLOCKED: client image / binary asset\n' >&2
+    sed 's/^/  /' "$PATH_HITS" >&2
+    rm -f "$PATH_HITS"
+    echo "binary asset" >> "$SIGNAL"
+  fi
+}
+
+# Newline-separated path list, e.g. `path1\npath2`. Used by the unit tests
+# (SCAN_PATHS=1) where there's no real git index to read from -z. Real
+# commits go through the NUL-safe git-mode loop below instead, because a
+# newline-joined string cannot safely represent a path that itself
+# contains a literal newline.
+scan_paths() {
+  RAW_PATHS="$1"
+
+  if [ "${ALLOW_BINARY:-0}" = "1" ]; then
+    return 0
+  fi
+
+  printf '%s\n' "$RAW_PATHS" | while IFS= read -r P; do
+    check_one_path "$P"
+  done
+
+  finish_path_scan
+}
+
+if [ "${SCAN_STDIN:-0}" = "1" ]; then
+  scan_content "$(cat)"
+elif [ "${SCAN_PATHS:-0}" = "1" ]; then
+  scan_paths "$(cat)"
+else
+  # Added lines only, across the staged diff.
+  CONTENT=$(git diff --cached --unified=0 --no-color -- . \
+    | grep '^+' | grep -v '^+++' | sed 's/^+//' || true)
+  scan_content "$CONTENT"
+
+  # Staged file paths (added/copied/modified/renamed/type-changed — the
+  # destination path for renames and copies), independent of content: git
+  # never emits binary content as diff "+" lines, so a staged image
+  # produces zero pattern matches above and must be caught by path
+  # instead.
+  #
+  # -z is used instead of relying on core.quotePath: quotePath=false only
+  # stops quoting for non-ASCII bytes, but git ALWAYS C-quotes double
+  # quotes, backslashes, and control characters (including newline)
+  # regardless of that setting — e.g. a staged sub/a"b.jpg still comes
+  # back as "sub/a\"b.jpg", whose trailing quote would defeat the
+  # extension anchor below. -z sidesteps every quoting class at once by
+  # emitting raw paths separated by NUL. Keep -z: it is what stops the
+  # quoting, and tr only handles the record splitting.
+  #
+  # The records are then split with `tr '\0' '\n'` and read with a plain
+  # POSIX `read`. Do NOT "improve" this into `read -r -d ''`: -d is a
+  # bash/ksh extension that dash (/bin/sh on Debian, Ubuntu and most CI
+  # images) rejects with "read: Illegal option -d". Because a failing
+  # `read` is the normal way a `while read` loop ends, `set -eu` does NOT
+  # catch it — the loop body simply never runs and the whole staged-path
+  # guard silently scans zero files and exits 0. Every client photograph
+  # would commit cleanly.
+  #
+  # Splitting on newline is safe in the blocking direction: a path
+  # containing a literal newline is split into fragments, but
+  # BINARY_EXT_RE is anchored only at the END (\.(jpg|...)$), so the
+  # fragment carrying the real extension still ends in .jpg and still
+  # blocks. Splitting can only ever produce MORE candidate strings, never
+  # fewer matches. The only escaping case is a newline inside the
+  # extension itself (foo.j\npg), which does not end in a blocked
+  # extension to begin with and so was never a match either way. The
+  # reported path may be a fragment rather than the whole name; that is
+  # cosmetic, the commit is still blocked.
+  if [ "${ALLOW_BINARY:-0}" != "1" ]; then
+    git diff --cached -z --name-only --diff-filter=ACMRT \
+      | tr '\0' '\n' \
+      | while IFS= read -r P; do
+          check_one_path "$P"
+        done
+  fi
+  finish_path_scan
+fi
+
+STATUS=0
+if [ -f "$SIGNAL" ]; then
+  rm -f "$SIGNAL"
+  cat >&2 <<'MSG'
+
+This repo is public. Move the value to .env (local) or a Worker secret
+(production). If a content match is genuinely safe, append  leak-ok  to that
+line (the exemption will be echoed above so it stays visible).
+
+Client images belong in Sanity, never in this repo. If a binary file
+genuinely belongs here (e.g. a favicon), rerun the commit with
+ALLOW_BINARY=1 set for that single commit.
+MSG
+  STATUS=1
+fi
+
+exit $STATUS
