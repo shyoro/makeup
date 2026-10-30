@@ -106,7 +106,7 @@
   git commit -m "feat(sanity): stock media seed script"
   ```
 
-  The pre-commit leak guard must pass with no `leak-ok`.
+  The pre-commit leak guard must pass with no exemption marker.
 
 ### Task 3: Image URL helper and `<Media>`
 
