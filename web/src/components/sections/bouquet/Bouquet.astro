@@ -1,0 +1,156 @@
+---
+// The opening bouquet: dark brush work that draws itself (data-lines) and
+// flowers that open along it (data-piece). Hidden starting states are set by
+// the scene script, so without JS the bouquet is simply shown fully grown.
+import type { BouquetPiece, FlowerTone } from '../../../lib/sanity/types';
+import { imageSrcSet } from '../../../lib/sanity/image';
+import { placeholderShape } from './pieces';
+
+interface Props {
+  pieces: BouquetPiece[];
+  class?: string;
+}
+
+const { pieces, class: className } = Astro.props;
+
+// viewBox is 100 × 125, matching aspect-portrait on the wrapper.
+const H = 125;
+// The site is Hebrew-only and RTL, so inline-start is the right edge.
+const toX = (x: number) => 100 - x;
+const toY = (y: number) => (y / 100) * H;
+
+const toneFill: Record<FlowerTone, string> = {
+  pink: 'fill-flower-pink',
+  blue: 'fill-flower-blue',
+  purple: 'fill-flower-purple',
+  leaf: 'fill-flower-leaf',
+};
+
+// Stems rise from the base; calligraphic curls sweep out toward inline-end.
+const stems = [
+  'M70 125 C72 110 80 104 78 97 C76 85 70 82 70 77 C72 70 78 66 76 60 C74 54 84 52 86 47',
+  'M66 125 C62 112 58 100 60 92 C62 84 50 80 52 75 C54 66 60 60 58 55 C56 48 46 46 46 40',
+  'M74 125 C80 100 66 60 72 30',
+  'M68 125 C60 90 70 40 62 22',
+];
+const curls = [
+  'M60 55 C40 50 30 40 34 30 C37 22 46 24 44 30 C42 35 36 33 37 29',
+  'M78 97 C92 100 98 90 94 82 C91 76 85 79 87 83',
+  'M62 22 C55 10 40 8 30 14 C24 18 26 26 32 24',
+  'M52 75 C34 80 20 74 16 64 C13 56 20 52 24 56',
+];
+const feathers = ['M46 40 C40 28 30 20 18 18', 'M86 47 C92 36 96 26 98 18'];
+const dots = [
+  [31, 46, 0.9],
+  [27, 50, 0.7],
+  [24, 53, 0.5],
+  [22, 22, 0.8],
+  [19, 27, 0.6],
+  [17, 31, 0.45],
+] as const;
+// Black teardrop flicks of the brush, as in her filigree: [x, y, rotate, size].
+const flicks = [
+  [40, 44, -60, 1],
+  [36, 52, -80, 0.8],
+  [90, 88, 40, 0.9],
+  [30, 18, -40, 0.9],
+  [26, 70, -100, 0.8],
+  [94, 60, 20, 0.7],
+  [50, 30, -20, 0.7],
+] as const;
+const FLICK = 'M0 0 C3 -2 4 -8 0 -14 C-1 -8 -2 -3 0 0 Z';
+---
+
+<div
+  data-bouquet
+  class:list={['aspect-portrait', className]}
+  aria-hidden="true"
+>
+  <svg viewBox={`0 0 100 ${H}`} class="size-full overflow-visible">
+    <g data-lines class="fill-transparent">
+      {stems.map((d) => (
+        <path
+          d={d}
+          class="stroke-flower-line"
+          stroke-width="0.7"
+          stroke-linecap="round"
+        />
+      ))}
+      {curls.map((d) => (
+        <path
+          d={d}
+          class="stroke-flower-line"
+          stroke-width="0.9"
+          stroke-linecap="round"
+        />
+      ))}
+      {feathers.map((d) => (
+        <path
+          d={d}
+          class="stroke-flower-purple"
+          stroke-width="1.4"
+          stroke-linecap="round"
+          opacity="0.75"
+        />
+      ))}
+    </g>
+    <g data-accents class="fill-flower-line">
+      {dots.map(([cx, cy, r]) => (
+        <circle cx={cx} cy={cy} r={r} />
+      ))}
+      {flicks.map(([x, y, r, k]) => (
+        <path
+          d={FLICK}
+          transform={`translate(${x} ${y}) rotate(${r}) scale(${k * 0.5})`}
+        />
+      ))}
+    </g>
+    {pieces.map((p) => {
+      const shape = placeholderShape(p.kind);
+      const scale = p.scale * 0.5;
+      return (
+        <g
+          data-piece
+          data-at={p.at}
+          transform={`translate(${toX(p.x)} ${toY(p.y)}) rotate(${p.rotate}) scale(${scale})`}
+        >
+          <g data-bloom>
+            {p.image ? (
+              <image
+                href={imageSrcSet(p.image, 'avatar', [200]).src}
+                x="-25"
+                y="-25"
+                width="50"
+                height="50"
+              />
+            ) : (
+              <>
+                {shape.fills.map((d) => (
+                  <path d={d} class={toneFill[p.tone]} />
+                ))}
+                {shape.highlights.map((d) => (
+                  <path
+                    d={d}
+                    class="fill-transparent stroke-surface"
+                    stroke-width="2.6"
+                    stroke-linecap="round"
+                    opacity="0.85"
+                  />
+                ))}
+                {shape.lines.map((d) => (
+                  <path
+                    d={d}
+                    class="fill-transparent stroke-flower-line"
+                    stroke-width="1"
+                    stroke-linecap="round"
+                    opacity="0.6"
+                  />
+                ))}
+              </>
+            )}
+          </g>
+        </g>
+      );
+    })}
+  </svg>
+</div>
