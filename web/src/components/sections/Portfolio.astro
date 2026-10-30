@@ -23,15 +23,17 @@ const alternate = <T,>(pair: readonly [T, T], i: number): T =>
 
 // Text sections, the heading first, take turns: words to one side and then
 // the other (statement lines and the closing are centred), flowers in the
-// opposite corner, top then bottom, turned 90° then 180°.
+// opposite corner, turned 90° then 180°. After a photo (or her painting, for
+// the heading) the flowers grow from the bottom, so they never lie over the
+// picture as it leaves; otherwise from the top.
 let texts = 0;
 let sides = 0;
-function textLayout(centred: boolean) {
+function textLayout(centred: boolean, afterPicture: boolean) {
   const t = texts++;
   const align: Align = centred
     ? 'center'
     : alternate(['start', 'end'] as const, sides++);
-  const block = alternate(['top', 'bottom'] as const, t);
+  const block = afterPicture ? 'bottom' : 'top';
   const inline =
     align === 'center'
       ? alternate(['start', 'end'] as const, t)
@@ -46,10 +48,11 @@ function textLayout(centred: boolean) {
   };
 }
 
-const heading = textLayout(false);
+const heading = textLayout(false, true);
 // Scenes alternate the colour they wash into.
 let scenes = 0;
-const story = section.blocks.map((block: StoryBlock) => {
+const story = section.blocks.map((block: StoryBlock, i) => {
+  const afterPicture = section.blocks[i - 1]?._type === 'scene';
   switch (block._type) {
     case 'scene':
       return {
@@ -59,25 +62,28 @@ const story = section.blocks.map((block: StoryBlock) => {
     case 'pair':
       return block;
     case 'text':
-      return { ...block, layout: textLayout(Boolean(block.statement)) };
+      return {
+        ...block,
+        layout: textLayout(Boolean(block.statement), afterPicture),
+      };
     case 'closing':
-      return { ...block, layout: textLayout(true) };
+      return { ...block, layout: textLayout(true, afterPicture) };
   }
 });
 
-const body = 'mt-4 text-lg leading-relaxed text-ink md:text-xl';
+const body = 'mt-4 text-lg leading-relaxed text-pretty text-ink md:text-xl';
 ---
 
 {/* Rises over the opening's last stretch: see --role-scene-overlap. */}
 <section data-scene="portfolio" class="relative -mt-scene-overlap">
   <InkFilter />
   <TextPanel flowers={section.flowers} {...heading}>
-    <h2 class="font-display text-5xl leading-none md:text-7xl">
+    <h2 class="font-display text-5xl leading-none text-balance md:text-7xl">
       {section.title}
     </h2>
     {section.intro && <p class={body}>{section.intro}</p>}
     {section.startingPrice && (
-      <p class="mt-4 text-lg text-ink md:text-xl">
+      <p class="mt-4 text-lg text-pretty text-ink md:text-xl">
         איפור כלה החל מ־<span dir="ltr">{section.startingPrice} ₪</span>
       </p>
     )}
@@ -89,15 +95,15 @@ const body = 'mt-4 text-lg leading-relaxed text-ink md:text-xl';
     if (block._type === 'pair') return <Pair items={block.items} />;
     if (block._type === 'closing')
       return (
-        <TextPanel flowers={section.flowers} {...block.layout}>
+        <TextPanel flowers={section.flowers} {...block.layout} drawIn>
           <div data-closing>
-            <h3 class="font-display text-5xl leading-tight md:text-7xl">
+            <h3 class="font-display text-5xl leading-tight text-balance md:text-7xl">
               {block.title}
             </h3>
             <p class={body}>{block.body}</p>
             <a
               href={block.action.href}
-              class="mt-8 inline-flex min-h-12 items-center rounded-card bg-accent px-8 text-lg text-on-accent transition-opacity hover:opacity-90"
+              class="mt-8 inline-flex min-h-14 min-w-60 items-center justify-center rounded-card bg-accent px-8 text-lg text-on-accent transition-opacity hover:opacity-90"
             >
               {block.action.label}
             </a>
@@ -108,7 +114,7 @@ const body = 'mt-4 text-lg leading-relaxed text-ink md:text-xl';
       <TextPanel flowers={section.flowers} {...block.layout}>
         <h3
           class:list={[
-            'font-display',
+            'font-display text-balance',
             block.statement
               ? 'text-6xl leading-none md:text-8xl'
               : 'text-5xl leading-tight md:text-7xl',

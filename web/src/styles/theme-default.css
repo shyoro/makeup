@@ -38,7 +38,7 @@
   --role-scene-track: 200svh;
   /* How far the story rises over the end of the opening, so its first words
      arrive as the painting dims instead of after it has gone. */
-  --role-scene-overlap: 50svh;
+  --role-scene-overlap: 75svh;
   /* Scroll length of a full-screen photo scene: fade in, hold, wash out. */
-  --role-scene-hold: 160svh;
+  --role-scene-hold: 120svh;
 }

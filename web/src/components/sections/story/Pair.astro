@@ -1,7 +1,7 @@
 ---
-// Two photos, each rising gently into view inside a fixed frame with soft
-// corners: on phones stacked large and offset to either side, from tablets
-// side by side. Opacity and transform only.
+// Two photos, each rising gently into view and settling from a zoom inside a
+// fixed frame with soft corners: on phones stacked large and offset to either
+// side, from tablets side by side. Opacity and transform only.
 import type { MediaImage } from '../../../lib/sanity/types';
 import Media from '../../media/Media.astro';
 
@@ -14,13 +14,13 @@ const { items } = Astro.props;
 
 <div
   data-pair
-  class="relative z-10 grid grid-cols-1 items-start gap-8 px-6 py-section md:grid-cols-2 md:gap-12 md:px-16"
+  class="relative z-10 grid grid-cols-1 items-start gap-6 px-3 py-section md:grid-cols-2 md:gap-12 md:px-16"
 >
   {items.map((item, i) => (
     <div
       data-reveal
       class:list={[
-        'w-11/12 md:w-full',
+        'w-6/7 md:w-full',
         i === 1 ? 'justify-self-end md:mt-32' : 'justify-self-start',
       ]}
     >
@@ -39,6 +39,18 @@ const { items } = Astro.props;
   for (const wrap of document.querySelectorAll<HTMLElement>(
     '[data-pair] [data-reveal]',
   )) {
+    // The photo settles inside its frame as it enters: a compositor scroll
+    // timeline, like the scenes' zoom (see Scene.astro for why it is set up
+    // in script).
+    const img = wrap.querySelector('img');
+    if (img && 'ViewTimeline' in window)
+      img.animate({ scale: ['1.15', '1'] }, {
+        timeline: new ViewTimeline({ subject: wrap, axis: 'block' }),
+        rangeStart: 'entry 0%',
+        rangeEnd: 'entry 80%',
+        fill: 'both',
+      } as KeyframeAnimationOptions);
+
     // Starting state is set here, never in markup, so no-JS shows them.
     gsap.set(wrap, { opacity: 0, y: 56 });
     gsap.to(wrap, {

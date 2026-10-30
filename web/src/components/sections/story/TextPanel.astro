@@ -1,7 +1,7 @@
 ---
 // A text section that scrolls over the full-screen photos, with her flowers
 // growing beside the words. The words rise in as the section arrives and,
-// when a photo comes next, dissolve as it fades in.
+// when a photo comes next, words and flowers dissolve as it fades in.
 import type { SanityImageRef } from '../../../lib/sanity/types';
 import Flowers from './Flowers.astro';
 
@@ -12,9 +12,11 @@ interface Props {
   align: 'start' | 'end' | 'center';
   /** Which corner the flowers grow from, clear of the words. */
   place: 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end';
+  /** The flowers draw themselves once in view, instead of with scroll. */
+  drawIn?: boolean;
 }
 
-const { flowers, turn, align, place } = Astro.props;
+const { flowers, turn, align, place, drawIn = false } = Astro.props;
 ---
 
 <div
@@ -25,7 +27,9 @@ const { flowers, turn, align, place } = Astro.props;
     align === 'center' && 'justify-center text-center',
   ]}
 >
-  {flowers && <Flowers image={flowers} turn={turn} place={place} />}
+  {flowers && (
+    <Flowers image={flowers} turn={turn} place={place} drawIn={drawIn} />
+  )}
   <div data-panel-text class="relative max-w-prose">
     <slot />
   </div>
@@ -52,15 +56,15 @@ const { flowers, turn, align, place } = Astro.props;
         },
       },
     );
-    // Hand over to the next photo: out as it fades in, and quicker, so the
-    // words are gone before the photo is strong enough to fight them
-    // (Scene.astro times it by its top, which is this panel's bottom).
+    // Hand over to the next photo: words and flowers out as it fades in, and
+    // quicker, so they are gone before the photo is strong enough to fight
+    // them (Scene.astro times it by its top, which is this panel's bottom).
     let next = panel.nextElementSibling;
     // Astro renders each component's script where it is first used.
     while (next?.tagName === 'SCRIPT') next = next.nextElementSibling;
     if (next?.matches('[data-story-scene]'))
       gsap.fromTo(
-        text,
+        panel.children,
         { autoAlpha: 1, y: 0 },
         {
           // Lifting as it goes also keeps it on its own layer while it fades.
@@ -70,8 +74,8 @@ const { flowers, turn, align, place } = Astro.props;
           immediateRender: false,
           scrollTrigger: {
             trigger: panel,
-            start: 'bottom 85%',
-            end: 'bottom 60%',
+            start: 'bottom 95%',
+            end: 'bottom 70%',
             scrub: 0.5,
           },
         },

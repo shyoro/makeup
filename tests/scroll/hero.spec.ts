@@ -77,6 +77,26 @@ test('the scroll cue fades out with the name', async ({ page }) => {
   expect(await opacity('[data-scene="hero"] [data-cue]')).toBeLessThan(0.05);
 });
 
+test('her painting has gone as the opening ends, the first words in', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  await scrollToHeroEnd(page);
+  const opacity = (selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((el) => {
+        let o = 1;
+        for (let n: Element | null = el; n; n = n.parentElement)
+          o *= Number(getComputedStyle(n).opacity);
+        return o;
+      });
+  expect(await opacity('[data-scene="hero"] [data-art]')).toBeLessThan(0.05);
+  expect(await opacity('[data-panel-text]')).toBeGreaterThan(0.5);
+});
+
 test('scrolling paints the whole spray', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('load');

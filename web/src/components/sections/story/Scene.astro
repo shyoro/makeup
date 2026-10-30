@@ -1,9 +1,9 @@
 ---
 // A full-screen photo the story passes through. With JS the photo layer is
-// fixed to the screen: it fades in as the words before it dissolve, settles
-// from a subtle zoom (a compositor scroll timeline), takes a veil of one of
-// her colours from below as the next words rise over it, then fades away.
-// Without JS it is simply sticky.
+// fixed to the screen: it fades in as the words before it dissolve, landing
+// from a zoom, then keeps pushing in slowly (a compositor scroll timeline)
+// while it holds, takes a veil of one of her colours from below as the next
+// words rise over it, and fades away. Without JS it is simply sticky.
 // Transforms and opacity only.
 import type { MediaImage } from '../../../lib/sanity/types';
 import Media from '../../media/Media.astro';
@@ -63,19 +63,26 @@ const { media, tone } = Astro.props;
       end,
       scrub: 0.5,
     });
-    // The zoom is a scroll-driven animation on the scene's own track, so it
-    // runs on the compositor (driving scale from JS repainted every frame).
+    // The zoom is a scroll-driven animation over the scene's whole pass, so
+    // it runs on the compositor (driving scale from JS repainted every
+    // frame): it lands during the fade-in, then pushes in until it leaves.
     // Set up through the Web Animations API: the CSS build minifier rewrites
     // animation-timeline/animation-range rules incorrectly. Browsers without
     // view timelines show the photo without the zoom.
     if ('ViewTimeline' in window) {
-      zoom.animate({ scale: ['1.1', '1'] }, {
-        timeline: new ViewTimeline({ subject: scene, axis: 'block' }),
-        rangeStart: 'entry 50%',
-        rangeEnd: 'exit 100%',
-        fill: 'both',
-        easing: 'linear',
-      } as KeyframeAnimationOptions);
+      zoom.animate(
+        [
+          { scale: '1.3', offset: 0, easing: 'ease-out' },
+          { scale: '1', offset: 0.3 },
+          { scale: '1.12', offset: 1 },
+        ],
+        {
+          timeline: new ViewTimeline({ subject: scene, axis: 'block' }),
+          rangeStart: 'cover 0%',
+          rangeEnd: 'cover 100%',
+          fill: 'both',
+        } as KeyframeAnimationOptions,
+      );
     }
 
     // Separate elements for each effect, so no two tweens fight over one
@@ -84,7 +91,7 @@ const { media, tone } = Astro.props;
     gsap.fromTo(
       layer,
       { autoAlpha: 0 },
-      { autoAlpha: 1, ease: 'none', scrollTrigger: at('top 85%', 'top 45%') },
+      { autoAlpha: 1, ease: 'none', scrollTrigger: at('top 95%', 'top 55%') },
     );
     // A veil, not a slab: capped, so the photo still shows through.
     gsap.fromTo(

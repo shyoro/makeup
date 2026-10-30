@@ -131,13 +131,14 @@ const layers = [
         },
       },
     });
-    // Colour first, then the name and cue lift away, then the art dims as
-    // the stage leaves: no stretch where nothing moves.
+    // Colour first, then the name and cue lift away, then the art fades out
+    // as the story's first words rise over it: no stretch where nothing
+    // moves, and no other flowers over her painting.
     tl.to(state, { color: 1, duration: 0.6, onUpdate: render }, 0)
       // No zoom on the art: scaling it re-rasterised both layers every frame.
       .to(powder, { yPercent: -18, duration: 1 }, 0)
       .to(words, { opacity: 0, y: -32, duration: 0.2 }, 0.5)
-      .to(box, { opacity: 0.6, duration: 0.25 }, 0.75);
+      .to(box, { opacity: 0, duration: 0.25 }, 0.75);
 
     whenLoaded(box.querySelector('[data-wipe="line"] img'), 1200).then(() => {
       gsap.to(state, {

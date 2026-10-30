@@ -1,7 +1,8 @@
 ---
 // Her ink drawing, turned a quarter or half turn, growing along the spray from
-// one corner of its text section as it scrolls into view, bleeding off the
-// side of the screen and clear of the words. Drawn in ink by InkFilter.astro over the CDN's
+// one corner of its text section as it scrolls into view (or, at the end of
+// the story where scroll runs out, drawing itself like the opening), bleeding
+// off the side of the screen and clear of the words. Drawn in ink by InkFilter.astro over the CDN's
 // black-and-white version. Decorative only.
 import type { MediaImage, SanityImageRef } from '../../../lib/sanity/types';
 import Media from '../../media/Media.astro';
@@ -10,9 +11,10 @@ interface Props {
   image: SanityImageRef;
   turn: 90 | 180;
   place: 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end';
+  drawIn?: boolean;
 }
 
-const { image, turn, place } = Astro.props;
+const { image, turn, place, drawIn = false } = Astro.props;
 const top = place.startsWith('top');
 const start = place.endsWith('start');
 
@@ -34,8 +36,9 @@ const media: MediaImage = {
 >
   <div
     data-flowers
+    data-draw-in={drawIn || undefined}
     class:list={[
-      'relative aspect-editorial shrink-0 opacity-50',
+      'relative aspect-editorial shrink-0 opacity-70',
       // A half turn lies wide and can grow larger than an upright quarter.
       turn === 90 ? 'w-4/5 rotate-90 md:w-1/2' : 'w-full rotate-180 md:w-3/5',
       // Inside the section top to bottom (its edge would cut them mid-
@@ -83,16 +86,34 @@ const media: MediaImage = {
       sweep.layout();
       render();
     });
+    // How long a self-drawing spray takes, in seconds; as the opening's.
+    const DRAW_IN = 1.8;
+    if (box.hasAttribute('data-draw-in')) {
+      ScrollTrigger.create({
+        trigger: box,
+        start: 'top 85%',
+        once: true,
+        onEnter: () => {
+          gsap.to(state, {
+            p: 1,
+            duration: DRAW_IN,
+            ease: 'power1.inOut',
+            onUpdate: render,
+          });
+        },
+      });
+      continue;
+    }
     gsap.to(state, {
       p: 1,
       ease: 'none',
       onUpdate: render,
       scrollTrigger: {
-        // Grows while it is on screen: from entering until its middle
-        // reaches the middle of the screen.
+        // Grows on screen, from its top reaching the middle (by then the
+        // opening's painting has gone) until its middle is well up.
         trigger: box,
-        start: 'top bottom',
-        end: 'center 50%',
+        start: 'top 50%',
+        end: 'center 30%',
         scrub: 0.5,
       },
     });
