@@ -37,12 +37,14 @@ const vineBlooms = [
     aria-hidden="true"
   >
     <svg
+      data-vine-box
       viewBox="0 0 20 200"
       preserveAspectRatio="none"
       width="100%"
       height="100%"
     >
       <path
+        data-vine-path
         d={VINE}
         class="fill-transparent stroke-flower-line"
         stroke-width="1"
@@ -115,15 +117,41 @@ const vineBlooms = [
   import { gsap } from '../../lib/motion/gsap';
 
   // Arch: an inset clip whose top corners are fully rounded, opening upward.
-  const CLOSED = 'inset(100% 0% 0% 0% round 999px 999px 0px 0px)';
-  const OPEN = 'inset(0% 0% 0% 0% round 999px 999px 0px 0px)';
+  // The string is rebuilt from one number every frame — interpolating two
+  // clip-path strings lets the browser's shorthand shuffle the values.
+  const arch = (top: number) =>
+    `inset(${top}% 0% 0% 0% round 999px 999px 0px 0px)`;
+
+  // Rebuild the vine in pixels for the box it actually has, so DrawSVG can
+  // measure it (a stretched viewBox needs non-scaling-stroke, which it can't).
+  function buildVine(scene: HTMLElement) {
+    const box = scene.querySelector<SVGSVGElement>('[data-vine-box]');
+    const path = scene.querySelector<SVGPathElement>('[data-vine-path]');
+    if (!box || !path) return null;
+    const { width, height } = box.getBoundingClientRect();
+    const bends = Math.max(4, Math.round(height / 120));
+    const mid = width / 2;
+    let d = `M${mid} 0`;
+    for (let i = 0; i < bends; i++) {
+      const y0 = (i / bends) * height;
+      const y1 = ((i + 1) / bends) * height;
+      const side = i % 2 === 0 ? width * 0.1 : width * 0.9;
+      d += ` C${side} ${y0 + 10} ${side} ${y1 - 10} ${mid} ${y1}`;
+    }
+    box.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    box.removeAttribute('preserveAspectRatio');
+    path.removeAttribute('vector-effect');
+    path.setAttribute('d', d);
+    return path;
+  }
 
   for (const scene of document.querySelectorAll<HTMLElement>(
     '[data-scene="portfolio"]',
   )) {
     for (const wrap of scene.querySelectorAll<HTMLElement>('[data-reveal]')) {
       const img = wrap.querySelector('img');
-      gsap.set(wrap, { clipPath: CLOSED });
+      const reveal = { top: 100 };
+      wrap.style.clipPath = arch(reveal.top);
       gsap.set(img, { scale: 1.1 });
       gsap
         .timeline({
@@ -131,15 +159,20 @@ const vineBlooms = [
           scrollTrigger: {
             trigger: wrap,
             start: 'top 85%',
-            end: 'center center',
+            // clamp() keeps the end reachable for the last photos on the page.
+            end: 'clamp(center center)',
             scrub: 0.6,
           },
         })
-        .to(wrap, { clipPath: OPEN }, 0)
+        .to(
+          reveal,
+          { top: 0, onUpdate: () => (wrap.style.clipPath = arch(reveal.top)) },
+          0,
+        )
         .to(img, { scale: 1 }, 0);
     }
 
-    const vine = scene.querySelector('[data-vine] path');
+    const vine = buildVine(scene);
     const blooms = [
       ...scene.querySelectorAll<SVGSVGElement>('[data-vine-bloom] > g'),
     ];
@@ -150,7 +183,7 @@ const vineBlooms = [
       scrollTrigger: {
         trigger: scene,
         start: 'top 80%',
-        end: 'bottom bottom',
+        end: 'clamp(bottom bottom)',
         scrub: 0.6,
       },
     });

@@ -75,3 +75,63 @@ test('no horizontal overflow after resize', async ({ page }) => {
     expect(overflow, `overflow at ${size.width}×${size.height}`).toBe(false);
   }
 });
+
+test('every photo is fully open at the bottom of the page', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(1500);
+  const clips = await page
+    .locator('[data-reveal]')
+    .evaluateAll((els) => els.map((el) => getComputedStyle(el).clipPath));
+  for (const c of clips) expect(c).toMatch(OPEN);
+});
+
+test('the arch opens symmetrically mid-reveal', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  // Put the first photo's top at ~70% of the viewport: between the trigger's
+  // start (top 85%) and end, so the reveal is part-way.
+  await page
+    .locator('[data-reveal]')
+    .first()
+    .evaluate((el) => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, top - window.innerHeight * 0.7);
+    });
+  await page.waitForTimeout(1200);
+  const clip = await page
+    .locator('[data-reveal]')
+    .first()
+    .evaluate((el) => getComputedStyle(el).clipPath);
+  const m = /^inset\(([^)]*?)(?: round ([^)]*))?\)$/.exec(clip);
+  expect(m, clip).not.toBeNull();
+  const v = m![1].trim().split(/\s+/);
+  const [t, r = t, , l = r] = v;
+  expect(parseFloat(t!), `${clip} should be part-way`).toBeGreaterThan(0);
+  expect(parseFloat(t!)).toBeLessThan(100);
+  expect(r, `left/right insets differ in ${clip}`).toBe(l);
+  const radii = (m![2] ?? '').trim().split(/\s+/);
+  expect(radii[0], `top corners differ in ${clip}`).toBe(radii[1] ?? radii[0]);
+});
+
+test('the vine is fully drawn at the bottom of the page', async ({ page }) => {
+  const warnings: string[] = [];
+  page.on('console', (msg) => {
+    if (/vector-effect/i.test(msg.text())) warnings.push(msg.text());
+  });
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(1500);
+  const { drawn, length } = await page
+    .locator('[data-vine-path]')
+    .evaluate((p: SVGPathElement) => ({
+      drawn: parseFloat(getComputedStyle(p).strokeDasharray),
+      length: p.getTotalLength(),
+    }));
+  expect(warnings).toEqual([]);
+  expect(drawn).toBeGreaterThan(length - 1);
+});
