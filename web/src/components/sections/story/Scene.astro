@@ -1,8 +1,9 @@
 ---
 // A full-screen photo the story passes through. With JS the photo layer is
 // fixed to the screen: it fades in as its track arrives, settles from a
-// subtle zoom, washes into one of her colours as the next text section
-// scrolls over it, then fades away. Without JS it is simply sticky.
+// subtle zoom (a compositor scroll timeline), washes into one of her colours
+// as the next text section scrolls over it, then fades away. Without JS it is
+// simply sticky.
 // Transforms and opacity only.
 import type { MediaImage } from '../../../lib/sanity/types';
 import Media from '../../media/Media.astro';
@@ -53,7 +54,6 @@ const { media, tone } = Astro.props;
     // Pin the photo to the screen; the track below it sets the timing.
     layer.classList.replace('sticky', 'fixed');
     layer.classList.add('inset-0');
-    zoom.classList.add('will-change-transform');
 
     const at = (start: string, end: string) => ({
       trigger: scene,
@@ -61,17 +61,27 @@ const { media, tone } = Astro.props;
       end,
       scrub: 0.5,
     });
+    // The zoom is a scroll-driven animation on the scene's own track, so it
+    // runs on the compositor (driving scale from JS repainted every frame).
+    // Set up through the Web Animations API: the CSS build minifier rewrites
+    // animation-timeline/animation-range rules incorrectly. Browsers without
+    // view timelines show the photo without the zoom.
+    if ('ViewTimeline' in window) {
+      zoom.animate({ scale: ['1.1', '1'] }, {
+        timeline: new ViewTimeline({ subject: scene, axis: 'block' }),
+        rangeStart: 'entry 50%',
+        rangeEnd: 'exit 100%',
+        fill: 'both',
+        easing: 'linear',
+      } as KeyframeAnimationOptions);
+    }
+
     // Separate elements for each effect, so no two tweens fight over one
-    // property: layer fades in, zoom settles, wash rises, fade takes it out.
+    // property: layer fades in, wash rises, fade takes it out.
     gsap.fromTo(
       layer,
       { autoAlpha: 0 },
       { autoAlpha: 1, ease: 'none', scrollTrigger: at('top 50%', 'top top') },
-    );
-    gsap.fromTo(
-      zoom,
-      { scale: 1.1 },
-      { scale: 1, ease: 'none', scrollTrigger: at('top 50%', 'bottom top') },
     );
     gsap.fromTo(
       wash,

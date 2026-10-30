@@ -32,7 +32,9 @@ async function sceneState(page: Page, nth = 0) {
       return {
         position: getComputedStyle(layer).position,
         shown: visible(layer) * visible(fade),
-        zoom: new DOMMatrix(getComputedStyle(zoom).transform).a,
+        zoom: ((sc) => (sc === 'none' ? 1 : parseFloat(sc)))(
+          getComputedStyle(zoom).scale,
+        ),
         wash: Number(
           getComputedStyle(scene.querySelector('[data-wash]')!).opacity,
         ),
