@@ -1,0 +1,25 @@
+---
+// Renders sections in data order. An unknown _type renders nothing and warns
+// at build time — new content types in Studio must never crash the page.
+import type { PageSection } from '../../lib/sanity/types';
+import { sectionRegistry } from './registry';
+
+interface Props {
+  sections: PageSection[];
+}
+
+const { sections } = Astro.props;
+
+const resolved = sections.flatMap((section) => {
+  const Component = sectionRegistry[section._type];
+  if (!Component) {
+    console.warn('Unknown section type', section._type);
+    return [];
+  }
+  return [{ section, Component }];
+});
+---
+
+{resolved.map(({ section, Component }) => (
+  <Component section={section} />
+))}

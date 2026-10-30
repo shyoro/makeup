@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 // shape comes from the locked aspect ratio, never from the asset.
 
 test('media renders a sanity srcset', async ({ page }) => {
-  await page.goto('/media-test');
+  await page.goto('/');
   const img = page.locator('[data-media] img').first();
   const srcset = (await img.getAttribute('srcset')) ?? '';
   expect(srcset).toContain('cdn.sanity.io');
@@ -15,7 +15,7 @@ test('media renders a sanity srcset', async ({ page }) => {
 });
 
 test('media box is locked to its aspect', async ({ page }) => {
-  await page.goto('/media-test');
+  await page.goto('/');
   const box = await page.locator('[data-media]').first().boundingBox();
   expect(box).not.toBeNull();
   expect(Math.abs(box!.width / box!.height - 0.8)).toBeLessThan(0.01);

@@ -1,0 +1,22 @@
+---
+import type { PortfolioSection } from '../../lib/sanity/types';
+import Media from '../media/Media.astro';
+
+interface Props {
+  section: PortfolioSection;
+}
+
+const { section } = Astro.props;
+---
+
+<section data-scene="portfolio">
+  <h2 class="font-display">{section.title}</h2>
+  {section.startingPrice && (
+    <p>
+      איפור כלה החל מ־<span dir="ltr">{section.startingPrice} ₪</span>
+    </p>
+  )}
+  {section.items.map((item) => (
+    <Media media={item} sizes="90vw" class="w-full" />
+  ))}
+</section>

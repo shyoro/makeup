@@ -1,0 +1,16 @@
+---
+import type { HeroSection } from '../../lib/sanity/types';
+
+interface Props {
+  section: HeroSection;
+}
+
+const { section } = Astro.props;
+---
+
+<section data-scene="hero">
+  {/* mt-4 is what tests/wave1/tokens.spec.ts's source-glob test reads off the
+      first h1 on /. Keep it on this heading. */}
+  <h1 class="font-display mt-4">{section.name}</h1>
+  <p>{section.subtitle}</p>
+</section>
