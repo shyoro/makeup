@@ -52,11 +52,12 @@
    narrow rather than "everything under web/", not a guarantee that it can
    never happen again. When a later agent adds a role or a new breakpoint
    variant to the contract, add its class name to the inline list too.
-   `mask-r-from-70%` is there because web/src/lib/motion/sweep.ts adds it
-   from TypeScript, which is not scanned. */
+   `mask-r-from-70%` and the feather's `bg-linear-to-r from-transparent
+   to-surface` are there because web/src/lib/motion/sweep.ts adds them from
+   TypeScript, which is not scanned. */
 @import 'tailwindcss' source(none);
 @source "../**/*.{astro,md,mdx}";
-@source inline("bg-{surface,surface-raised,accent} text-{ink,ink-muted,on-accent} border-hairline font-{display,ui} rounded-card py-section aspect-{hero,portrait,editorial,avatar} bg-powder-{peach,lilac} bg-blush from-wash-{blush,peach} mask-r-from-70% h-scene h-scene-hold -mt-scene-overlap md:hidden lg:hidden xl:hidden 2xl:hidden");
+@source inline("bg-{surface,surface-raised,accent} text-{ink,ink-muted,on-accent} border-hairline font-{display,ui} rounded-card py-section aspect-{hero,portrait,editorial,avatar} bg-powder-{peach,lilac} bg-blush from-wash-{blush,peach} mask-r-from-70% bg-linear-to-r from-transparent to-surface h-scene h-scene-hold -mt-scene-overlap md:hidden lg:hidden xl:hidden 2xl:hidden");
 @import './fonts.css';
 @import './theme-default.css';
 @import './theme-contract.css';

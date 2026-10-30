@@ -104,7 +104,7 @@ const layers = [
       box.querySelector<HTMLElement>(`[data-wipe="${name}"]`)!;
     // The drawing plays on its own, with a soft edge; the colour follows
     // scroll only, with a crisp one (see sweep.ts on soft edges and scroll).
-    const line = createSweep(box, layer('line'), { soft: true });
+    const line = createSweep(box, layer('line'), { edge: 'mask' });
     const color = createSweep(box, layer('color'));
     const state = { line: 0, color: 0 };
     const render = () => {

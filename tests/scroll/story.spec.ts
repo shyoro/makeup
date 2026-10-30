@@ -236,8 +236,8 @@ test('text sections carry her flowers in ink, turned 90° and 180°', async ({
   for (const f of flowers) {
     expect(f.mono).toBe(true);
     expect(f.ink).toContain('url(');
-    expect(f.opacity).toBeGreaterThanOrEqual(0.65);
-    expect(f.opacity).toBeLessThanOrEqual(0.75);
+    expect(f.opacity).toBeGreaterThanOrEqual(0.55);
+    expect(f.opacity).toBeLessThanOrEqual(0.65);
   }
 });
 
@@ -310,22 +310,10 @@ test('flowers leave with the words before the next photo', async ({ page }) => {
   expect(flowers).toBeLessThan(0.05);
 });
 
-test('the flowers grow as they scroll into view', async ({ page }) => {
+test('the flowers grow as their section scrolls through', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('load');
   const flowers = page.locator('[data-panel] [data-flowers]').nth(1);
-  // Scroll so the box's top (or centre) sits at `at` of the screen.
-  const place = async (edge: 'top' | 'center', at: number) => {
-    await flowers.evaluate(
-      (el, [edge, at]) => {
-        const r = el.getBoundingClientRect();
-        const y = edge === 'top' ? r.top : r.top + r.height / 2;
-        window.scrollTo(0, window.scrollY + y - innerHeight * Number(at));
-      },
-      [edge, at] as const,
-    );
-    await page.waitForTimeout(1200);
-  };
   // Share of the box's visible part that the sweep has uncovered.
   const uncovered = () =>
     flowers.evaluate((box) => {
@@ -336,6 +324,7 @@ test('the flowers grow as they scroll into view', async ({ page }) => {
       const bottom = Math.min(r.bottom, p.bottom, innerHeight);
       const left = Math.max(r.left, p.left, 0);
       const right = Math.min(r.right, p.right, innerWidth);
+      if (bottom <= top || right <= left) return 0;
       let hits = 0;
       for (let i = 0.5; i < 6; i++)
         for (let j = 0.5; j < 6; j++) {
@@ -344,18 +333,53 @@ test('the flowers grow as they scroll into view', async ({ page }) => {
           if (
             document
               .elementsFromPoint(x, y)
-              .some((el) => box.contains(el) && el.closest('[data-wipe]'))
+              .some((el) => el.matches('[data-flowers] [data-wipe] img'))
           )
             hits++;
         }
       return hits / 36;
     });
-  await place('top', 0.85);
+  // Its section follows a photo: nothing grows until that has gone.
+  await placeTop(page, '[data-panel]', 0.3, 1);
   const early = await uncovered();
-  await place('center', 0.25);
+  await placeTop(page, '[data-panel]', -0.45, 1);
   const late = await uncovered();
+  expect(early).toBe(0);
   expect(late).toBeGreaterThan(0.8);
-  expect(late - early).toBeGreaterThan(0.3);
+});
+
+test('the growing spray has a soft leading edge, without a moving mask', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  const edges = await page
+    .locator('[data-flowers] [data-wipe]')
+    .evaluateAll((wins) =>
+      wins.map((win) => {
+        const feather = win.querySelector<HTMLElement>(
+          ':scope > [data-feather]',
+        );
+        const w = (win as HTMLElement).offsetWidth;
+        return {
+          // A moving mask re-rasterises every frame.
+          mask: getComputedStyle(win).maskImage,
+          fill: feather ? getComputedStyle(feather).backgroundImage : 'none',
+          // The fade sits on the window's leading (far) end.
+          end: feather
+            ? Math.abs(feather.offsetLeft + feather.offsetWidth - w)
+            : w,
+          share: feather ? feather.offsetWidth / w : 0,
+        };
+      }),
+    );
+  expect(edges.length).toBeGreaterThan(0);
+  for (const e of edges) {
+    expect(e.mask).toBe('none');
+    expect(e.fill).toContain('linear-gradient');
+    expect(e.end).toBeLessThanOrEqual(1);
+    expect(e.share).toBeGreaterThan(0.2);
+  }
 });
 
 test('the last flowers draw themselves as the story ends', async ({ page }) => {

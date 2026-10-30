@@ -265,3 +265,48 @@ sections above where they conflict.
   Each photo fades and rises out of the page's background tone. The
   portfolio background drifts through blush, peach and lilac as she scrolls.
   The arch mask is removed.
+
+## 13. Revision: the portfolio as a scroll story (Shai, 2026-10-30)
+
+Shai asked for text sections between the photos, and for photos animated like
+Rockstar's GTA VI site: the page should move between words and pictures as
+she scrolls. He also asked for her flowers in black and white as a background,
+turned 90° and 180°. He asked for a designer review loop until the result
+meets that goal. These points override the sections above where they
+conflict.
+
+- **The portfolio is an ordered list of story blocks** from data:
+  - full-screen photo scenes
+  - text sections (one may be a larger, centred statement line)
+  - photo pairs
+  - a closing section with one action
+
+  The opening's painting fades out as the first words rise over it. Each text
+  section dissolves as the next photo fades in (a cross-fade), so no screen is
+  empty. A test checks this.
+- **Photos land from a zoom (1.3×), then push in slowly until they leave.**
+  This is one compositor scroll timeline over the photo's whole pass, set up
+  through the Web Animations API, which supersedes §12's "no zoom" point. A
+  zoom driven from JS repainted every frame. The CSS form of the zoom is
+  broken by the build minifier.
+  - As the next words rise, the photo takes a gradient veil of blush or peach
+    from below, capped at 65% and mixed a quarter of the way to the surface.
+  - Pair photos settle from 1.15× inside their 5px frames.
+  - Photos keep their focal point (Sanity hotspot).
+- **Flowers behind the text** are her ink drawing, turned a quarter or half
+  turn.
+  - They are drawn in the ink colour (the site's black) by an SVG filter, at
+    70%.
+  - They sit in a corner of the section, clear of the words, and bleed off
+    the side of the screen.
+  - After a photo they grow from the bottom, so they never lie over a picture.
+  - The last spray draws itself, like the opening.
+- **Soft sweep edges only on sweeps that play on their own** (the opening's
+  ink draw-in). The mask comes off once the art is uncovered, because a
+  moving mask re-rasterises every frame. Scroll-driven sweeps keep a crisp
+  edge.
+- **The closing action points at a placeholder** (`#booking`) until the
+  booking section exists. No contact details are invented.
+- **Mock photos:** the branded flat-lay and the hotel-vanity stock photos are
+  dropped, and the story ends on the bride in her veil. Better stock or her
+  own work replaces them through `scripts/seed-media.mjs`.

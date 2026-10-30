@@ -37,6 +37,7 @@ const { flowers, turn, align, place, drawIn = false } = Astro.props;
 
 <script>
   import { gsap } from '../../../lib/motion/gsap';
+  import { pictureBeside } from '../../../lib/motion/story';
 
   for (const panel of document.querySelectorAll<HTMLElement>('[data-panel]')) {
     const text = panel.querySelector('[data-panel-text]');
@@ -59,10 +60,7 @@ const { flowers, turn, align, place, drawIn = false } = Astro.props;
     // Hand over to the next photo: words and flowers out as it fades in, and
     // quicker, so they are gone before the photo is strong enough to fight
     // them (Scene.astro times it by its top, which is this panel's bottom).
-    let next = panel.nextElementSibling;
-    // Astro renders each component's script where it is first used.
-    while (next?.tagName === 'SCRIPT') next = next.nextElementSibling;
-    if (next?.matches('[data-story-scene]'))
+    if (pictureBeside(panel, 'after'))
       gsap.fromTo(
         panel.children,
         { autoAlpha: 1, y: 0 },

@@ -38,7 +38,9 @@ const media: MediaImage = {
     data-flowers
     data-draw-in={drawIn || undefined}
     class:list={[
-      'relative aspect-editorial shrink-0 opacity-70',
+      // Clips the sweep window to the spray, so nothing of it (its feathered
+      // edge included) shows beyond the drawing.
+      'relative aspect-editorial shrink-0 overflow-hidden opacity-60',
       // A half turn lies wide and can grow larger than an upright quarter.
       turn === 90 ? 'w-4/5 rotate-90 md:w-1/2' : 'w-full rotate-180 md:w-3/5',
       // Inside the section top to bottom (its edge would cut them mid-
@@ -53,7 +55,7 @@ const media: MediaImage = {
           media={media}
           fit="contain"
           mono
-          widths={[800, 1200, 1600]}
+          widths={[800, 1200, 1600, 2000]}
           sizes="(min-width: 768px) 60vw, 100vw"
           class="size-full"
         />
@@ -72,12 +74,17 @@ const media: MediaImage = {
 
 <script>
   import { gsap, ScrollTrigger } from '../../../lib/motion/gsap';
+  import { pictureBeside } from '../../../lib/motion/story';
   import { createSweep } from '../../../lib/motion/sweep';
 
   for (const box of document.querySelectorAll<HTMLElement>('[data-flowers]')) {
     const win = box.querySelector<HTMLElement>('[data-wipe]');
-    if (!win) continue;
-    const sweep = createSweep(box, win);
+    const panel = box.closest<HTMLElement>('[data-panel]');
+    if (!win || !panel) continue;
+    // A feathered edge, which only reads over the plain surface: so it grows
+    // only once any photo before it has gone, and is done before the words
+    // hand over to a photo after it (TextPanel.astro).
+    const sweep = createSweep(box, win, { edge: 'feather' });
     const state = { p: 0 };
     const render = () => sweep.render(state.p);
     sweep.layout();
@@ -90,8 +97,9 @@ const media: MediaImage = {
     const DRAW_IN = 1.8;
     if (box.hasAttribute('data-draw-in')) {
       ScrollTrigger.create({
-        trigger: box,
-        start: 'top 85%',
+        trigger: panel,
+        // Once the photo before it has all but gone.
+        start: 'top 5%',
         once: true,
         onEnter: () => {
           gsap.to(state, {
@@ -104,16 +112,23 @@ const media: MediaImage = {
       });
       continue;
     }
+    // In terms of its section: a picture before it has gone once the
+    // section fills the screen (its top at 0), and the hand-off to a photo
+    // after it starts as the section's top passes -5%. Between two pictures
+    // it takes the stretch in between, starting once the photo is mostly gone.
+    const afterPicture = pictureBeside(panel, 'before');
+    const beforePicture = pictureBeside(panel, 'after');
+    let start = afterPicture ? 'top top' : 'top 60%';
+    if (afterPicture && beforePicture) start = 'top 15%';
+    const end = beforePicture ? 'top -5%' : 'top -40%';
     gsap.to(state, {
       p: 1,
       ease: 'none',
       onUpdate: render,
       scrollTrigger: {
-        // Grows on screen, from its top reaching the middle (by then the
-        // opening's painting has gone) until its middle is well up.
-        trigger: box,
-        start: 'top 50%',
-        end: 'center 30%',
+        trigger: panel,
+        start,
+        end,
         scrub: 0.5,
       },
     });
