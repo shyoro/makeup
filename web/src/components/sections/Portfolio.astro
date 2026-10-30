@@ -1,33 +1,40 @@
 ---
-// Portfolio scene: each photo rises gently out of the page's background tone
-// as it scrolls in, inside a fixed frame with soft corners, while the
-// background drifts through her colours behind it. Transforms and opacity
-// only — and no zoom on the photos, which forced a repaint every frame.
-import type { PortfolioSection } from '../../lib/sanity/types';
-import Media from '../media/Media.astro';
+// Portfolio as a scroll story: full-screen photo scenes and text sections
+// take turns, so the page moves between pictures and words as she scrolls,
+// with photo pairs in between. Block order comes from data.
+import type { PortfolioSection, StoryBlock } from '../../lib/sanity/types';
+import Pair from './story/Pair.astro';
+import Scene from './story/Scene.astro';
+import TextPanel from './story/TextPanel.astro';
 
 interface Props {
   section: PortfolioSection;
 }
 
 const { section } = Astro.props;
+
+// Scenes alternate the colour they wash into; text sections alternate the
+// turn of the flowers behind them (the heading section takes the first).
+const TONES = ['blush', 'peach'] as const;
+const TURNS = [90, 180] as const;
+const alternate = <T,>(pair: readonly [T, T], i: number): T =>
+  i % 2 === 0 ? pair[0] : pair[1];
+let scenes = 0;
+let texts = 1;
+const blocks = section.blocks.map((block: StoryBlock) => ({
+  block,
+  tone: alternate(TONES, block._type === 'scene' ? scenes++ : 0),
+  turn: alternate(TURNS, block._type === 'text' ? texts++ : 0),
+}));
 ---
 
-<section data-scene="portfolio" class="relative py-section">
-  <div class="pointer-events-none absolute inset-0" aria-hidden="true">
-    <div class="sticky top-0 h-svh overflow-hidden">
-      <div data-tone class="absolute inset-0 bg-blush opacity-0"></div>
-      <div data-tone class="absolute inset-0 bg-powder-peach opacity-0"></div>
-      <div data-tone class="absolute inset-0 bg-powder-lilac opacity-0"></div>
-    </div>
-  </div>
-
-  <div class="relative px-6 md:px-16">
+<section data-scene="portfolio" class="relative">
+  <TextPanel flowers={section.flowers} turn={TURNS[0]}>
     <h2 class="font-display text-5xl leading-none md:text-7xl">
       {section.title}
     </h2>
     {section.intro && (
-      <p class="mt-4 max-w-prose text-lg leading-relaxed text-ink-muted">
+      <p class="mt-4 text-lg leading-relaxed text-ink-muted md:text-xl">
         {section.intro}
       </p>
     )}
@@ -36,66 +43,21 @@ const { section } = Astro.props;
         איפור כלה החל מ־<span dir="ltr">{section.startingPrice} ₪</span>
       </p>
     )}
+  </TextPanel>
 
-    <div class="mt-12 grid items-start gap-10 md:grid-cols-2 md:gap-x-12 md:gap-y-0">
-      {section.items.map((item, i) => (
-        <div data-reveal class:list={[i % 2 === 1 && 'md:mt-32']}>
-          <Media
-            media={item}
-            sizes="(min-width: 768px) 45vw, 90vw"
-            class="w-full rounded-card"
-          />
-        </div>
-      ))}
-    </div>
-  </div>
+  {blocks.map(({ block, tone, turn }) => {
+    if (block._type === 'scene')
+      return <Scene media={block.media} tone={tone} />;
+    if (block._type === 'pair') return <Pair items={block.items} />;
+    return (
+      <TextPanel flowers={section.flowers} turn={turn}>
+        <h3 class="font-display text-4xl leading-tight md:text-6xl">
+          {block.title}
+        </h3>
+        <p class="mt-4 text-lg leading-relaxed text-ink-muted md:text-xl">
+          {block.body}
+        </p>
+      </TextPanel>
+    );
+  })}
 </section>
-
-<script>
-  import { gsap } from '../../lib/motion/gsap';
-
-  // How strongly each background tone washes in at its peak, in order.
-  const TONE_PEAKS = [0.35, 0.3, 0.2];
-
-  for (const scene of document.querySelectorAll<HTMLElement>(
-    '[data-scene="portfolio"]',
-  )) {
-    for (const wrap of scene.querySelectorAll<HTMLElement>('[data-reveal]')) {
-      // Starting state is set here, never in markup, so no-JS shows them.
-      gsap.set(wrap, { opacity: 0, y: 56 });
-      gsap.to(wrap, {
-        opacity: 1,
-        y: 0,
-        ease: 'power1.out',
-        scrollTrigger: {
-          trigger: wrap,
-          start: 'top 95%',
-          // clamp() keeps the end reachable for the last photos on the page.
-          end: 'clamp(top 35%)',
-          scrub: 0.5,
-        },
-      });
-    }
-
-    const tones = [...scene.querySelectorAll<HTMLElement>('[data-tone]')];
-    const tl = gsap.timeline({
-      defaults: { ease: 'sine.inOut' },
-      scrollTrigger: {
-        trigger: scene,
-        start: 'top 60%',
-        end: 'clamp(bottom bottom)',
-        scrub: 0.5,
-      },
-    });
-    // Each tone fades out exactly as the next fades in, so the background
-    // drifts from one colour to the next without falling back to white.
-    const step = 1 / tones.length;
-    tones.forEach((tone, i) => {
-      const peak = TONE_PEAKS[i] ?? 0.2;
-      tl.to(tone, { opacity: peak, duration: step * 0.6 }, i * step);
-      if (i < tones.length - 1) {
-        tl.to(tone, { opacity: 0, duration: step * 0.6 }, (i + 1) * step);
-      }
-    });
-  }
-</script>

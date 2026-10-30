@@ -1,0 +1,50 @@
+---
+// Two photos side by side, offset, each rising gently into view inside a
+// fixed frame with soft corners. Opacity and transform only.
+import type { MediaImage } from '../../../lib/sanity/types';
+import Media from '../../media/Media.astro';
+
+interface Props {
+  items: [MediaImage, MediaImage];
+}
+
+const { items } = Astro.props;
+---
+
+<div
+  data-pair
+  class="relative z-10 grid grid-cols-2 items-start gap-4 px-6 py-section md:gap-12 md:px-16"
+>
+  {items.map((item, i) => (
+    <div data-reveal class:list={[i === 1 && 'mt-16 md:mt-32']}>
+      <Media
+        media={item}
+        sizes="(min-width: 768px) 45vw, 45vw"
+        class="w-full rounded-card"
+      />
+    </div>
+  ))}
+</div>
+
+<script>
+  import { gsap } from '../../../lib/motion/gsap';
+
+  for (const wrap of document.querySelectorAll<HTMLElement>(
+    '[data-pair] [data-reveal]',
+  )) {
+    // Starting state is set here, never in markup, so no-JS shows them.
+    gsap.set(wrap, { opacity: 0, y: 56 });
+    gsap.to(wrap, {
+      opacity: 1,
+      y: 0,
+      ease: 'power1.out',
+      scrollTrigger: {
+        trigger: wrap,
+        start: 'top 95%',
+        // clamp() keeps the end reachable for photos near the page bottom.
+        end: 'clamp(top 35%)',
+        scrub: 0.5,
+      },
+    });
+  }
+</script>

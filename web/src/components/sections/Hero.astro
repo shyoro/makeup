@@ -78,56 +78,10 @@ const layers = [
 
 <script>
   import { gsap, ScrollTrigger } from '../../lib/motion/gsap';
+  import { createSweep } from '../../lib/motion/sweep';
 
-  // The spray rises from bottom-left to top-right at about this angle; the
-  // sweep that uncovers it travels the same way.
-  const ANGLE = (-39 * Math.PI) / 180;
-  const DIR = { x: Math.cos(ANGLE), y: Math.sin(ANGLE) };
-  // The sweep window is longer than the art's diagonal by this share, so its
-  // soft leading edge (mask-r-from-75%) clears the far corner when done.
-  const OVERHANG = 0.35;
   // How far the drawing grows on its own at first view, before any scroll.
   const INTRO = 0.28;
-
-  // A rotated window that slides along DIR while its content slides back by
-  // the same amount: the art stays put and is uncovered along the spray.
-  // Transform-only, so it runs on the compositor.
-  function sweep(box: HTMLElement, name: 'line' | 'color') {
-    const win = box.querySelector<HTMLElement>(`[data-wipe="${name}"]`)!;
-    const inner = win.firstElementChild as HTMLElement;
-    win.classList.add('mask-r-from-75%', 'will-change-transform');
-    inner.classList.add('will-change-transform');
-    let diag = 0;
-    let len = 0;
-    return {
-      layout() {
-        const w = box.offsetWidth;
-        const h = box.offsetHeight;
-        diag = Math.hypot(w, h);
-        len = diag * (1 + OVERHANG);
-        Object.assign(win.style, {
-          inset: 'auto',
-          left: `${(w - len) / 2}px`,
-          top: `${(h - diag) / 2}px`,
-          width: `${len}px`,
-          height: `${diag}px`,
-        });
-        Object.assign(inner.style, {
-          inset: 'auto',
-          left: `${(len - w) / 2}px`,
-          top: `${(diag - h) / 2}px`,
-          width: `${w}px`,
-          height: `${h}px`,
-        });
-      },
-      /** p: 0 hidden → 1 fully uncovered. */
-      render(p: number) {
-        const s = (OVERHANG * diag) / 2 + (Math.min(p, 1) - 1) * len;
-        win.style.transform = `translate(${s * DIR.x}px, ${s * DIR.y}px) rotate(${ANGLE}rad)`;
-        inner.style.transform = `translateX(${-s}px) rotate(${-ANGLE}rad)`;
-      },
-    };
-  }
 
   function whenLoaded(img: HTMLImageElement | null, timeout: number) {
     return new Promise<void>((resolve) => {
@@ -146,8 +100,10 @@ const layers = [
     const powder = scene.querySelectorAll('[data-powder] > *');
     if (!box) continue;
 
-    const line = sweep(box, 'line');
-    const color = sweep(box, 'color');
+    const layer = (name: string) =>
+      box.querySelector<HTMLElement>(`[data-wipe="${name}"]`)!;
+    const line = createSweep(box, layer('line'));
+    const color = createSweep(box, layer('color'));
     // The drawing's progress is its intro plus what scroll adds; colour is
     // scroll only, trailing the drawing.
     const state = { intro: 0, line: 0, color: 0 };

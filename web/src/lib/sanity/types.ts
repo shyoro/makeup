@@ -36,6 +36,30 @@ export interface HeroSection {
   art: PaintedArt;
 }
 
+/** A full-screen photo the story passes through. */
+export interface StoryScene {
+  _type: 'scene';
+  _key: string;
+  media: MediaImage;
+}
+
+/** A text section that scrolls over the photos. */
+export interface StoryText {
+  _type: 'text';
+  _key: string;
+  title: string;
+  body: string;
+}
+
+/** Two photos side by side. */
+export interface StoryPair {
+  _type: 'pair';
+  _key: string;
+  items: [MediaImage, MediaImage];
+}
+
+export type StoryBlock = StoryScene | StoryText | StoryPair;
+
 export interface PortfolioSection {
   _type: 'portfolio';
   _key: string;
@@ -43,7 +67,10 @@ export interface PortfolioSection {
   intro?: string;
   /** Mock only until pricing comes from Sanity botKnowledge (parent spec §3.2). */
   startingPrice?: number;
-  items: MediaImage[];
+  /** Her ink drawing, shown in black and white behind the text sections. */
+  flowers?: SanityImageRef;
+  /** In reading order; she can reorder, add and remove them. */
+  blocks: StoryBlock[];
 }
 
 export type PageSection = HeroSection | PortfolioSection;

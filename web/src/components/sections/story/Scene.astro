@@ -1,0 +1,96 @@
+---
+// A full-screen photo the story passes through. With JS the photo layer is
+// fixed to the screen: it fades in as its track arrives, settles from a
+// subtle zoom, washes into one of her colours as the next text section
+// scrolls over it, then fades away. Without JS it is simply sticky.
+// Transforms and opacity only.
+import type { MediaImage } from '../../../lib/sanity/types';
+import Media from '../../media/Media.astro';
+
+interface Props {
+  media: MediaImage;
+  tone: 'blush' | 'peach';
+}
+
+const { media, tone } = Astro.props;
+---
+
+<div data-story-scene class="relative h-scene-hold">
+  <div data-layer class="sticky top-0 h-svh overflow-hidden">
+    <div data-fade class="absolute inset-0">
+      <div data-zoom class="absolute inset-0">
+        <Media
+          media={media}
+          fit="fill"
+          widths={[800, 1200, 1600, 2000]}
+          sizes="100vw"
+          class="size-full"
+        />
+      </div>
+      <div
+        data-wash
+        class:list={[
+          'absolute inset-0 opacity-0',
+          tone === 'peach' ? 'bg-powder-peach' : 'bg-blush',
+        ]}
+      ></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { gsap } from '../../../lib/motion/gsap';
+
+  for (const scene of document.querySelectorAll<HTMLElement>(
+    '[data-story-scene]',
+  )) {
+    const layer = scene.querySelector<HTMLElement>('[data-layer]');
+    const fade = scene.querySelector('[data-fade]');
+    const zoom = scene.querySelector<HTMLElement>('[data-zoom]');
+    const wash = scene.querySelector('[data-wash]');
+    if (!layer || !zoom) continue;
+
+    // Pin the photo to the screen; the track below it sets the timing.
+    layer.classList.replace('sticky', 'fixed');
+    layer.classList.add('inset-0');
+    zoom.classList.add('will-change-transform');
+
+    const at = (start: string, end: string) => ({
+      trigger: scene,
+      start,
+      end,
+      scrub: 0.5,
+    });
+    // Separate elements for each effect, so no two tweens fight over one
+    // property: layer fades in, zoom settles, wash rises, fade takes it out.
+    gsap.fromTo(
+      layer,
+      { autoAlpha: 0 },
+      { autoAlpha: 1, ease: 'none', scrollTrigger: at('top 50%', 'top top') },
+    );
+    gsap.fromTo(
+      zoom,
+      { scale: 1.1 },
+      { scale: 1, ease: 'none', scrollTrigger: at('top 50%', 'bottom top') },
+    );
+    gsap.fromTo(
+      wash,
+      { opacity: 0 },
+      {
+        opacity: 0.92,
+        ease: 'none',
+        scrollTrigger: at('bottom bottom', 'bottom 50%'),
+      },
+    );
+    gsap.fromTo(
+      fade,
+      { autoAlpha: 1 },
+      {
+        autoAlpha: 0,
+        ease: 'none',
+        immediateRender: false,
+        scrollTrigger: at('bottom 50%', 'bottom top'),
+      },
+    );
+  }
+</script>

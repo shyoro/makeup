@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 
 test('media renders a sanity srcset', async ({ page }) => {
   await page.goto('/');
-  const img = page.locator('[data-scene="portfolio"] [data-media] img').first();
+  const img = page.locator('[data-pair] [data-media] img').first();
   const srcset = (await img.getAttribute('srcset')) ?? '';
   expect(srcset).toContain('cdn.sanity.io');
   expect(
@@ -17,7 +17,7 @@ test('media renders a sanity srcset', async ({ page }) => {
 test('media box is locked to its aspect', async ({ page }) => {
   await page.goto('/');
   const box = await page
-    .locator('[data-scene="portfolio"] [data-media]')
+    .locator('[data-pair] [data-media]')
     .first()
     .boundingBox();
   expect(box).not.toBeNull();

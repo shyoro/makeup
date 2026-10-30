@@ -86,6 +86,7 @@
   --radius-card: var(--role-radius-card);
   --spacing-section: var(--role-space-section);
   --spacing-scene: var(--role-scene-track);
+  --spacing-scene-hold: var(--role-scene-hold);
 
   /* --- LOCKED aspect ratios --------------------------------------------
      Changing these after the client uploads a library means she re-crops

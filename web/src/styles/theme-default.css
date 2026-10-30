@@ -24,4 +24,6 @@
   --role-space-section: 4rem;
   /* Scroll length of a sticky scene: how long the opening plays. */
   --role-scene-track: 250svh;
+  /* Scroll length of a full-screen photo scene: fade in, hold, wash out. */
+  --role-scene-hold: 160svh;
 }

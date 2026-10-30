@@ -1,0 +1,47 @@
+---
+// A text section that scrolls over the full-screen photos, with her flowers
+// growing behind the words. The text rises in as the section arrives.
+import type { SanityImageRef } from '../../../lib/sanity/types';
+import Flowers from './Flowers.astro';
+
+interface Props {
+  flowers?: SanityImageRef;
+  turn: 90 | 180;
+}
+
+const { flowers, turn } = Astro.props;
+---
+
+<div
+  data-panel
+  class="relative z-10 flex min-h-svh items-center overflow-hidden px-6 py-section md:px-16"
+>
+  {flowers && <Flowers image={flowers} turn={turn} />}
+  <div data-panel-text class="relative max-w-prose">
+    <slot />
+  </div>
+</div>
+
+<script>
+  import { gsap } from '../../../lib/motion/gsap';
+
+  for (const panel of document.querySelectorAll<HTMLElement>('[data-panel]')) {
+    const text = panel.querySelector('[data-panel-text]');
+    // Starting state is set here, never in markup, so no-JS shows the text.
+    gsap.fromTo(
+      text,
+      { autoAlpha: 0, y: 40 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        ease: 'power1.out',
+        scrollTrigger: {
+          trigger: panel,
+          start: 'top 75%',
+          end: 'top 25%',
+          scrub: 0.5,
+        },
+      },
+    );
+  }
+</script>

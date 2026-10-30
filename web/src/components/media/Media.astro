@@ -10,9 +10,11 @@ interface Props {
   media: MediaImage;
   sizes: string;
   loading?: 'lazy' | 'eager';
-  /** 'contain' shows the whole asset (cut-out art); default crops to the slot. */
+  /** See ImageFit; default crops to the locked ratio. */
   fit?: ImageFit;
   widths?: number[];
+  /** Black and white. */
+  mono?: boolean;
   class?: string;
 }
 
@@ -22,14 +24,14 @@ const {
   loading = 'lazy',
   fit = 'cover',
   widths,
+  mono = false,
   class: className,
 } = Astro.props;
-const { src, srcset } = imageSrcSet(
-  media.image,
-  media.aspectRatio,
+const { src, srcset } = imageSrcSet(media.image, media.aspectRatio, {
   widths,
   fit,
-);
+  mono,
+});
 
 const aspectClass = {
   hero: 'aspect-hero',
@@ -52,7 +54,7 @@ const aspectClass = {
     decoding="async"
     class:list={[
       'absolute inset-0 size-full',
-      fit === 'cover' ? 'object-cover' : 'object-contain',
+      fit === 'contain' ? 'object-contain' : 'object-cover',
     ]}
   />
 </div>

@@ -46,31 +46,72 @@ export const mockPage: Page = {
       intro:
         'כל כלה מקבלת מראה שנבנה רק בשבילה, מהפגישה הראשונה ועד הבוקר של החתונה.',
       startingPrice: 450,
-      items: [
-        photo(
-          'image-984f00b691b9701d451a1bd0b9e7640f780e0147-2000x3000-jpg',
-          'כלה בזמן איפור לפני החופה',
-        ),
-        photo(
-          'image-17967403371056302fd038c06aeff8e7fb3664d6-2000x3000-jpg',
-          'מריחת סומק עדין על הלחי',
-        ),
-        photo(
-          'image-14985b0ec5fd6bb87988a852668d8d3bc0787e37-2000x2764-jpg',
-          'פרופיל של כלה מבעד להינומה',
-        ),
-        photo(
-          'image-3d9d808764e5bae180e7db18aa858acdc9662aa9-2000x3000-jpg',
-          'הדבקת ריסים במכחול דק',
-        ),
-        photo(
-          'image-1508d49ed84d73edff2c9e198a93cace11f83cd2-2000x2667-jpg',
-          'מוצרי איפור מסודרים על השולחן',
-        ),
-        photo(
-          'image-0a65f48d354b0da5eae245d4a6068b914ae6df3c-2000x1335-jpg',
-          'ערכת האיפור פתוחה על שולחן עץ',
-        ),
+      flowers: art.line,
+      blocks: [
+        {
+          _type: 'scene',
+          _key: 'bride',
+          media: photo(
+            'image-984f00b691b9701d451a1bd0b9e7640f780e0147-2000x3000-jpg',
+            'כלה בזמן איפור לפני החופה',
+          ),
+        },
+        {
+          _type: 'text',
+          _key: 'morning',
+          title: 'הבוקר שלך, בקצב שלך',
+          body: 'את מתיישבת, ואני דואגת לכל השאר. שקט, ריח של פרחים ומראה שמרגיש כמוך, רק ביום הכי יפה שלך.',
+        },
+        {
+          _type: 'pair',
+          _key: 'details',
+          items: [
+            photo(
+              'image-17967403371056302fd038c06aeff8e7fb3664d6-2000x3000-jpg',
+              'מריחת סומק עדין על הלחי',
+            ),
+            photo(
+              'image-3d9d808764e5bae180e7db18aa858acdc9662aa9-2000x3000-jpg',
+              'הדבקת ריסים במכחול דק',
+            ),
+          ],
+        },
+        {
+          _type: 'scene',
+          _key: 'veil',
+          media: photo(
+            'image-14985b0ec5fd6bb87988a852668d8d3bc0787e37-2000x2764-jpg',
+            'פרופיל של כלה מבעד להינומה',
+          ),
+        },
+        {
+          _type: 'text',
+          _key: 'lasting',
+          title: 'איפור שמחזיק עד הריקוד האחרון',
+          body: 'חומרים עדינים לעור, עבודת יד ותשומת לב לכל פרט, כדי שתיראי נפלא בכל תמונה, גם בסוף הערב.',
+        },
+        {
+          _type: 'scene',
+          _key: 'cosmetics',
+          media: photo(
+            'image-1508d49ed84d73edff2c9e198a93cace11f83cd2-2000x2667-jpg',
+            'מוצרי איפור מסודרים על השולחן',
+          ),
+        },
+        {
+          _type: 'text',
+          _key: 'evening',
+          title: 'מראה ערב לכל אירוע',
+          body: 'חתונה, חינה או ערב מיוחד. נבנה יחד מראה שמתאים לך, לשמלה ולאור של האירוע.',
+        },
+        {
+          _type: 'scene',
+          _key: 'kit',
+          media: photo(
+            'image-0a65f48d354b0da5eae245d4a6068b914ae6df3c-2000x1335-jpg',
+            'ערכת האיפור פתוחה על שולחן עץ',
+          ),
+        },
       ],
     },
   ],

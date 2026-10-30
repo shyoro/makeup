@@ -20,16 +20,29 @@ const RATIO: Record<AspectName, number> = {
 
 const DEFAULT_WIDTHS = [400, 800, 1200, 1600];
 
-/** 'cover' crops to the locked ratio; 'contain' keeps the whole asset. */
-export type ImageFit = 'cover' | 'contain';
+/**
+ * 'cover'   crops to the locked ratio at the CDN and fills the slot.
+ * 'contain' keeps the whole asset and fits it inside the slot (cut-out art).
+ * 'fill'    keeps the whole asset and fills a slot shaped by CSS, such as a
+ *           full-screen scene, cropping only in the browser.
+ */
+export type ImageFit = 'cover' | 'contain' | 'fill';
+
+export interface ImageOptions {
+  widths?: number[];
+  fit?: ImageFit;
+  /** Black and white, done by the CDN (saturation -100). */
+  mono?: boolean;
+}
 
 function urlFor(
   ref: SanityImageRef,
   aspect: AspectName,
   width: number,
-  fit: ImageFit,
+  { fit = 'cover', mono = false }: ImageOptions,
 ) {
-  const img = builder.image(ref).width(width).auto('format');
+  let img = builder.image(ref).width(width).auto('format');
+  if (mono) img = img.saturation(-100);
   return fit === 'cover'
     ? img
         .height(Math.round(width / RATIO[aspect]))
@@ -41,14 +54,14 @@ function urlFor(
 export function imageSrcSet(
   ref: SanityImageRef,
   aspect: AspectName,
-  widths: number[] = DEFAULT_WIDTHS,
-  fit: ImageFit = 'cover',
+  options: ImageOptions = {},
 ): { src: string; srcset: string } {
+  const widths = options.widths ?? DEFAULT_WIDTHS;
   const mid = widths[Math.floor(widths.length / 2)] ?? 800;
   return {
-    src: urlFor(ref, aspect, mid, fit),
+    src: urlFor(ref, aspect, mid, options),
     srcset: widths
-      .map((w) => `${urlFor(ref, aspect, w, fit)} ${w}w`)
+      .map((w) => `${urlFor(ref, aspect, w, options)} ${w}w`)
       .join(', '),
   };
 }

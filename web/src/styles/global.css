@@ -54,7 +54,7 @@
    variant to the contract, add its class name to the inline list too. */
 @import 'tailwindcss' source(none);
 @source "../**/*.{astro,md,mdx}";
-@source inline("bg-{surface,surface-raised,accent} text-{ink,ink-muted,on-accent} border-hairline font-{display,ui} rounded-card py-section aspect-{hero,portrait,editorial,avatar} bg-powder-{peach,lilac} bg-blush h-scene md:hidden lg:hidden xl:hidden 2xl:hidden");
+@source inline("bg-{surface,surface-raised,accent} text-{ink,ink-muted,on-accent} border-hairline font-{display,ui} rounded-card py-section aspect-{hero,portrait,editorial,avatar} bg-powder-{peach,lilac} bg-blush h-scene h-scene-hold md:hidden lg:hidden xl:hidden 2xl:hidden");
 @import './fonts.css';
 @import './theme-default.css';
 @import './theme-contract.css';
