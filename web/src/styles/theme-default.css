@@ -1,6 +1,6 @@
 /* Default direction: "A · Plum as the ink" — shaded white surface, very dark
    plum text, purple only as a quiet ink tone, never a bright button. Pink and
-   peach live in the powder haze and the flowers. See
+   peach live in the powder haze and the portfolio's background tones. See
    docs/superpowers/specs/2026-10-30-scroll-story-design.md §5.
    The *names* are the contract; the values are this direction's. */
 :root {
@@ -17,18 +17,11 @@
   --role-powder-lilac: #a77aa8;
   --role-blush: #e9b3c2;
 
-  /* Placeholder flower colours, from the artist's one-stroke painting style.
-     Her scanned artwork replaces the placeholders and carries its own
-     colours; these only matter until then (spec §6, §10). */
-  --role-flower-pink: #e58fb4;
-  --role-flower-blue: #7fa9db;
-  --role-flower-purple: #7b3f9e;
-  --role-flower-leaf: #c4dc5a;
-  --role-flower-line: #1f1422;
-
   --role-font-display: 'Frank Ruhl Libre', serif;
   --role-font-ui: 'Assistant', sans-serif;
 
-  --role-radius-card: 0.5rem;
+  --role-radius-card: 0.3125rem; /* ~5px: gentle, fixed photo corners */
   --role-space-section: 4rem;
+  /* Scroll length of a sticky scene: how long the opening plays. */
+  --role-scene-track: 250svh;
 }

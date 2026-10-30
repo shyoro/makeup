@@ -1,23 +1,31 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// The opening bouquet grows with scroll: line work draws itself, then each
-// flower opens at its point in the scene. Measured through the drawn dash
-// length (DrawSVG writes stroke-dasharray) and each piece's opacity.
+// The opening is her painting growing along the spray: the ink drawing sweeps
+// in from the bottom-left first, and the colour follows it as she scrolls.
+// Checked by hit-testing points of the art box: a layer only "hits" where its
+// sweep has uncovered it.
 
-async function bouquetState(page: Page) {
-  return page.evaluate(() => {
-    const line = document.querySelector<SVGPathElement>('[data-lines] path');
-    const dash = line ? getComputedStyle(line).strokeDasharray : 'none';
-    const drawn = dash === 'none' ? null : parseFloat(dash);
-    const opacities = [
-      ...document.querySelectorAll<SVGGElement>('[data-piece]'),
-    ].map((p) => Number(getComputedStyle(p).opacity));
-    return {
-      drawn,
-      length: line ? line.getTotalLength() : 0,
-      opacities,
-    };
-  });
+// Fractions of the art box. On phones the box is wider than the screen, so
+// both points must stay inside the visible middle of it.
+const REAR = [0.3, 0.72] as const; // lower-left, where the spray starts
+const LEAD = [0.7, 0.22] as const; // upper-right, uncovered last
+
+async function layersAt(page: Page, [fx, fy]: readonly [number, number]) {
+  const layers = await page.evaluate(
+    ([fx, fy]) => {
+      const box = document.querySelector('[data-art]')!.getBoundingClientRect();
+      const x = box.left + box.width * fx;
+      const y = box.top + box.height * fy;
+      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return null;
+      return document
+        .elementsFromPoint(x, y)
+        .map((el) => el.closest('[data-wipe]')?.getAttribute('data-wipe'))
+        .filter((v): v is string => Boolean(v));
+    },
+    [fx, fy] as const,
+  );
+  expect(layers, 'sample point must be on screen').not.toBeNull();
+  return layers!;
 }
 
 async function scrollToHeroEnd(page: Page) {
@@ -29,25 +37,23 @@ async function scrollToHeroEnd(page: Page) {
   await page.waitForTimeout(1200);
 }
 
-test('bouquet starts ungrown', async ({ page }) => {
+test('the drawing starts growing on first view', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('load');
-  const s = await bouquetState(page);
-  expect(s.drawn).not.toBeNull();
-  expect(s.drawn!).toBeLessThan(1);
-  expect(s.opacities.at(-1)!).toBeLessThan(0.1);
+  await page.waitForTimeout(2600);
+  expect(await layersAt(page, REAR)).toContain('line');
+  expect(await layersAt(page, REAR)).not.toContain('color');
+  expect(await layersAt(page, LEAD)).toEqual([]);
 });
 
-test('scrolling grows the bouquet', async ({ page }) => {
+test('scrolling paints the whole spray', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('load');
   await scrollToHeroEnd(page);
-  const s = await bouquetState(page);
-  expect(s.drawn!).toBeGreaterThan(s.length - 1);
-  for (const o of s.opacities) expect(o).toBeGreaterThan(0.9);
+  expect(await layersAt(page, LEAD)).toContain('color');
 });
 
-test('jumping to the bottom leaves the bouquet fully grown', async ({
+test('jumping to the bottom leaves the spray fully painted', async ({
   page,
 }) => {
   await page.goto('/');
@@ -55,18 +61,17 @@ test('jumping to the bottom leaves the bouquet fully grown', async ({
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await page.waitForTimeout(600);
   await scrollToHeroEnd(page);
-  const s = await bouquetState(page);
-  expect(s.drawn!).toBeGreaterThan(s.length - 1);
-  for (const o of s.opacities) expect(o).toBeGreaterThan(0.9);
+  expect(await layersAt(page, LEAD)).toContain('color');
 });
 
-test('content visible with JavaScript disabled', async ({ browser }) => {
+test('the whole painting shows with JavaScript disabled', async ({
+  browser,
+}) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto('/');
   await expect(page.locator('h1').first()).toBeVisible();
-  const s = await bouquetState(page);
-  expect(s.opacities.length).toBeGreaterThan(0);
-  for (const o of s.opacities) expect(o).toBe(1);
+  expect(await layersAt(page, LEAD)).toContain('color');
+  expect(await layersAt(page, REAR)).toContain('color');
   await context.close();
 });

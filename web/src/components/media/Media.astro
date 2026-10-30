@@ -4,17 +4,32 @@
 // the slot is sized before the image loads. Video is not built yet (parent
 // spec §7); only kind: 'image' exists in MediaImage.
 import type { MediaImage } from '../../lib/sanity/types';
-import { imageSrcSet } from '../../lib/sanity/image';
+import { imageSrcSet, type ImageFit } from '../../lib/sanity/image';
 
 interface Props {
   media: MediaImage;
   sizes: string;
   loading?: 'lazy' | 'eager';
+  /** 'contain' shows the whole asset (cut-out art); default crops to the slot. */
+  fit?: ImageFit;
+  widths?: number[];
   class?: string;
 }
 
-const { media, sizes, loading = 'lazy', class: className } = Astro.props;
-const { src, srcset } = imageSrcSet(media.image, media.aspectRatio);
+const {
+  media,
+  sizes,
+  loading = 'lazy',
+  fit = 'cover',
+  widths,
+  class: className,
+} = Astro.props;
+const { src, srcset } = imageSrcSet(
+  media.image,
+  media.aspectRatio,
+  widths,
+  fit,
+);
 
 const aspectClass = {
   hero: 'aspect-hero',
@@ -35,6 +50,9 @@ const aspectClass = {
     alt={media.alt}
     loading={loading}
     decoding="async"
-    class="absolute inset-0 size-full object-cover"
+    class:list={[
+      'absolute inset-0 size-full',
+      fit === 'cover' ? 'object-cover' : 'object-contain',
+    ]}
   />
 </div>

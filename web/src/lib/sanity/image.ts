@@ -20,23 +20,35 @@ const RATIO: Record<AspectName, number> = {
 
 const DEFAULT_WIDTHS = [400, 800, 1200, 1600];
 
-function urlFor(ref: SanityImageRef, aspect: AspectName, width: number) {
-  return builder
-    .image(ref)
-    .width(width)
-    .height(Math.round(width / RATIO[aspect]))
-    .fit('crop')
-    .auto('format')
-    .url();
+/** 'cover' crops to the locked ratio; 'contain' keeps the whole asset. */
+export type ImageFit = 'cover' | 'contain';
+
+function urlFor(
+  ref: SanityImageRef,
+  aspect: AspectName,
+  width: number,
+  fit: ImageFit,
+) {
+  const img = builder.image(ref).width(width).auto('format');
+  return fit === 'cover'
+    ? img
+        .height(Math.round(width / RATIO[aspect]))
+        .fit('crop')
+        .url()
+    : img.fit('max').url();
 }
 
 export function imageSrcSet(
   ref: SanityImageRef,
   aspect: AspectName,
   widths: number[] = DEFAULT_WIDTHS,
+  fit: ImageFit = 'cover',
 ): { src: string; srcset: string } {
+  const mid = widths[Math.floor(widths.length / 2)] ?? 800;
   return {
-    src: urlFor(ref, aspect, widths[Math.floor(widths.length / 2)] ?? 800),
-    srcset: widths.map((w) => `${urlFor(ref, aspect, w)} ${w}w`).join(', '),
+    src: urlFor(ref, aspect, mid, fit),
+    srcset: widths
+      .map((w) => `${urlFor(ref, aspect, w, fit)} ${w}w`)
+      .join(', '),
   };
 }

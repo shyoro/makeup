@@ -1,90 +1,28 @@
 ---
-// Portfolio scene: each photo opens through an arch as it scrolls into view
-// and settles from a slight zoom, while a vine keeps growing down the
-// inline-end edge — the opening bouquet carrying on.
+// Portfolio scene: each photo rises gently out of the page's background tone
+// as it scrolls in, inside a fixed frame with soft corners, while the
+// background drifts through her colours behind it. Transforms and opacity
+// only — and no zoom on the photos, which forced a repaint every frame.
 import type { PortfolioSection } from '../../lib/sanity/types';
 import Media from '../media/Media.astro';
-import { placeholderShape } from './bouquet/pieces';
 
 interface Props {
   section: PortfolioSection;
 }
 
 const { section } = Astro.props;
-
-// The vine is drawn in a 20 × 200 box stretched to the scene's full height;
-// blooms are nested SVGs placed by percentage so they never stretch.
-// 24 alternating bends, so it still winds when stretched over a tall scene.
-const BENDS = 24;
-const VINE = Array.from({ length: BENDS }, (_, i) => {
-  const y0 = (i / BENDS) * 200;
-  const y1 = ((i + 1) / BENDS) * 200;
-  const side = i % 2 === 0 ? 2 : 18;
-  return `C${side} ${y0 + 2} ${side} ${y1 - 2} 10 ${y1}`;
-}).reduce((d, seg) => `${d} ${seg}`, 'M10 0');
-const vineBlooms = [
-  { kind: 'leaf', tone: 'fill-flower-leaf', y: '20%', rotate: -40, at: 0.25 },
-  { kind: 'rose', tone: 'fill-flower-pink', y: '36%', rotate: 8, at: 0.4 },
-  { kind: 'leaf', tone: 'fill-flower-leaf', y: '59%', rotate: 50, at: 0.6 },
-  { kind: 'bud', tone: 'fill-flower-purple', y: '75%', rotate: -12, at: 0.75 },
-] as const;
 ---
 
-<section data-scene="portfolio" class="relative overflow-hidden py-section">
-  <svg
-    data-vine
-    class="pointer-events-none absolute inset-y-0 end-0 h-full w-10 overflow-visible md:w-16"
-    aria-hidden="true"
-  >
-    <svg
-      data-vine-box
-      viewBox="0 0 20 200"
-      preserveAspectRatio="none"
-      width="100%"
-      height="100%"
-    >
-      <path
-        data-vine-path
-        d={VINE}
-        class="fill-transparent stroke-flower-line"
-        stroke-width="1"
-        stroke-linecap="round"
-        vector-effect="non-scaling-stroke"
-      />
-    </svg>
-    {vineBlooms.map((b) => {
-      const shape = placeholderShape(b.kind);
-      return (
-        <svg
-          data-vine-bloom
-          data-at={b.at}
-          viewBox="-25 -25 50 50"
-          x="0"
-          y={b.y}
-          width="100%"
-          height="64"
-          class="overflow-visible"
-        >
-          <g transform={`rotate(${b.rotate})`}>
-            {shape.fills.map((d) => (
-              <path d={d} class={b.tone} />
-            ))}
-            {shape.highlights.map((d) => (
-              <path
-                d={d}
-                class="fill-transparent stroke-surface"
-                stroke-width="2.6"
-                stroke-linecap="round"
-                opacity="0.85"
-              />
-            ))}
-          </g>
-        </svg>
-      );
-    })}
-  </svg>
+<section data-scene="portfolio" class="relative py-section">
+  <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+    <div class="sticky top-0 h-svh overflow-hidden">
+      <div data-tone class="absolute inset-0 bg-blush opacity-0"></div>
+      <div data-tone class="absolute inset-0 bg-powder-peach opacity-0"></div>
+      <div data-tone class="absolute inset-0 bg-powder-lilac opacity-0"></div>
+    </div>
+  </div>
 
-  <div class="relative pe-14 ps-6 md:pe-24 md:ps-16">
+  <div class="relative px-6 md:px-16">
     <h2 class="font-display text-5xl leading-none md:text-7xl">
       {section.title}
     </h2>
@@ -104,8 +42,8 @@ const vineBlooms = [
         <div data-reveal class:list={[i % 2 === 1 && 'md:mt-32']}>
           <Media
             media={item}
-            sizes="(min-width: 768px) 45vw, 85vw"
-            class="w-full rounded-t-full"
+            sizes="(min-width: 768px) 45vw, 90vw"
+            class="w-full rounded-card"
           />
         </div>
       ))}
@@ -116,87 +54,48 @@ const vineBlooms = [
 <script>
   import { gsap } from '../../lib/motion/gsap';
 
-  // Arch: an inset clip whose top corners are fully rounded, opening upward.
-  // The string is rebuilt from one number every frame — interpolating two
-  // clip-path strings lets the browser's shorthand shuffle the values.
-  const arch = (top: number) =>
-    `inset(${top}% 0% 0% 0% round 999px 999px 0px 0px)`;
-
-  // Rebuild the vine in pixels for the box it actually has, so DrawSVG can
-  // measure it (a stretched viewBox needs non-scaling-stroke, which it can't).
-  function buildVine(scene: HTMLElement) {
-    const box = scene.querySelector<SVGSVGElement>('[data-vine-box]');
-    const path = scene.querySelector<SVGPathElement>('[data-vine-path]');
-    if (!box || !path) return null;
-    const { width, height } = box.getBoundingClientRect();
-    const bends = Math.max(4, Math.round(height / 120));
-    const mid = width / 2;
-    let d = `M${mid} 0`;
-    for (let i = 0; i < bends; i++) {
-      const y0 = (i / bends) * height;
-      const y1 = ((i + 1) / bends) * height;
-      const side = i % 2 === 0 ? width * 0.1 : width * 0.9;
-      d += ` C${side} ${y0 + 10} ${side} ${y1 - 10} ${mid} ${y1}`;
-    }
-    box.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    box.removeAttribute('preserveAspectRatio');
-    path.removeAttribute('vector-effect');
-    path.setAttribute('d', d);
-    return path;
-  }
+  // How strongly each background tone washes in at its peak, in order.
+  const TONE_PEAKS = [0.35, 0.3, 0.2];
 
   for (const scene of document.querySelectorAll<HTMLElement>(
     '[data-scene="portfolio"]',
   )) {
     for (const wrap of scene.querySelectorAll<HTMLElement>('[data-reveal]')) {
-      const img = wrap.querySelector('img');
-      const reveal = { top: 100 };
-      wrap.style.clipPath = arch(reveal.top);
-      gsap.set(img, { scale: 1.1 });
-      gsap
-        .timeline({
-          defaults: { ease: 'none' },
-          scrollTrigger: {
-            trigger: wrap,
-            start: 'top 85%',
-            // clamp() keeps the end reachable for the last photos on the page.
-            end: 'clamp(center center)',
-            scrub: 0.6,
-          },
-        })
-        .to(
-          reveal,
-          { top: 0, onUpdate: () => (wrap.style.clipPath = arch(reveal.top)) },
-          0,
-        )
-        .to(img, { scale: 1 }, 0);
+      // Starting state is set here, never in markup, so no-JS shows them.
+      gsap.set(wrap, { opacity: 0, y: 56 });
+      gsap.to(wrap, {
+        opacity: 1,
+        y: 0,
+        ease: 'power1.out',
+        scrollTrigger: {
+          trigger: wrap,
+          start: 'top 95%',
+          // clamp() keeps the end reachable for the last photos on the page.
+          end: 'clamp(top 35%)',
+          scrub: 0.5,
+        },
+      });
     }
 
-    const vine = buildVine(scene);
-    const blooms = [
-      ...scene.querySelectorAll<SVGSVGElement>('[data-vine-bloom] > g'),
-    ];
-    gsap.set(vine, { drawSVG: '0%' });
-    gsap.set(blooms, { opacity: 0, scale: 0, svgOrigin: '0 0' });
+    const tones = [...scene.querySelectorAll<HTMLElement>('[data-tone]')];
     const tl = gsap.timeline({
-      defaults: { ease: 'none' },
+      defaults: { ease: 'sine.inOut' },
       scrollTrigger: {
         trigger: scene,
-        start: 'top 80%',
+        start: 'top 60%',
         end: 'clamp(bottom bottom)',
-        scrub: 0.6,
+        scrub: 0.5,
       },
     });
-    tl.to(vine, { drawSVG: '100%', duration: 1 }, 0);
-    for (const bloom of blooms) {
-      const at = Number(
-        bloom.closest<SVGSVGElement>('[data-vine-bloom]')?.dataset.at,
-      );
-      tl.to(
-        bloom,
-        { opacity: 1, scale: 1, duration: 0.1, ease: 'back.out(1.6)' },
-        at,
-      );
-    }
+    // Each tone fades out exactly as the next fades in, so the background
+    // drifts from one colour to the next without falling back to white.
+    const step = 1 / tones.length;
+    tones.forEach((tone, i) => {
+      const peak = TONE_PEAKS[i] ?? 0.2;
+      tl.to(tone, { opacity: peak, duration: step * 0.6 }, i * step);
+      if (i < tones.length - 1) {
+        tl.to(tone, { opacity: 0, duration: step * 0.6 }, (i + 1) * step);
+      }
+    });
   }
 </script>

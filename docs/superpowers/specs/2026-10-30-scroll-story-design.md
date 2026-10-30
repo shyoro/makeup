@@ -235,3 +235,33 @@ including no horizontal overflow at 390 / 820 / 1440 and the RTL tests.
   ownership table.
 - How many portfolio photos (suggest 4–6) and which stock photos (bridal and
   makeup themed, freely licensed).
+
+## 12. Revision after the first review (Shai, 2026-10-30)
+
+Shai reviewed the first pass and asked for three changes. These override the
+sections above where they conflict.
+
+- **Flowers are her painting, not drawn placeholders.** The opening uses her
+  main spray in two aligned transparent layers of the same size, both held in
+  Sanity and never committed:
+  - an ink drawing (her line art with the background removed)
+  - the finished colour cut-out
+
+  As she scrolls, the drawing sweeps in along the spray's own direction, from
+  bottom-left to top-right, and the colour follows it. The drawing begins on
+  its own at first view. The placeholder SVG bouquet, the portfolio vine and
+  the `flower-*` colour tokens are removed. §6's "pieces as data" model is
+  replaced by `HeroSection.art: { line, color }`.
+- **Smooth scrolling comes first.** The opening uses a native `position:
+  sticky` stage over a tall track (`h-scene`, token `--role-scene-track`)
+  instead of ScrollTrigger pinning.
+  - Only transforms and opacity animate.
+  - The sweep is a rotated window moved by transforms, with a soft edge from a
+    static mask.
+  - The powder glows are plain radial gradients with no blur filter.
+  - There is no zoom on the art or on the photos, because zooming forced a
+    re-raster or repaint every frame.
+- **Photos have gentle 5px corners** (`rounded-card`, `--role-radius-card`).
+  Each photo fades and rises out of the page's background tone. The
+  portfolio background drifts through blush, peach and lilac as she scrolls.
+  The arch mask is removed.

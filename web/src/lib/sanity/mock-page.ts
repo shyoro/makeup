@@ -1,6 +1,6 @@
 // Mock content, replaced later by a typed GROQ query returning the same Page
 // shape. Images are real Sanity assets uploaded by scripts/seed-media.mjs.
-import type { BouquetPiece, MediaImage, Page } from './types';
+import type { MediaImage, Page, PaintedArt } from './types';
 
 function photo(ref: string, alt: string): MediaImage {
   return {
@@ -11,220 +11,23 @@ function photo(ref: string, alt: string): MediaImage {
   };
 }
 
-// Weighted toward the inline-start side, under the name; blooms climb the
-// stems from the bottom up, so `at` grows as `y` shrinks.
-const bouquet: BouquetPiece[] = [
-  {
-    _key: 'l6',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 18,
-    y: 84,
-    scale: 0.8,
-    rotate: -70,
-    at: 0.14,
+// Her painting (the main spray), as two aligned transparent layers. The IDs
+// are Sanity's content hashes of the prepared files; they resolve once the
+// files are uploaded with scripts/seed-media.mjs.
+const art = {
+  line: {
+    _type: 'image',
+    asset: {
+      _ref: 'image-db096159a2154d1d2a8560dbc42dc2d81bc31367-2000x1493-png',
+    },
   },
-  {
-    _key: 'l7',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 46,
-    y: 68,
-    scale: 0.7,
-    rotate: 60,
-    at: 0.36,
+  color: {
+    _type: 'image',
+    asset: {
+      _ref: 'image-27b2596cd848435ffd3f0f91adf354c62c627354-2000x1493-png',
+    },
   },
-  {
-    _key: 'l8',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 8,
-    y: 54,
-    scale: 0.75,
-    rotate: -80,
-    at: 0.52,
-  },
-  {
-    _key: 'l9',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 56,
-    y: 40,
-    scale: 0.65,
-    rotate: 70,
-    at: 0.66,
-  },
-  {
-    _key: 'l10',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 20,
-    y: 30,
-    scale: 0.6,
-    rotate: -55,
-    at: 0.8,
-  },
-  {
-    _key: 'l11',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 46,
-    y: 24,
-    scale: 0.6,
-    rotate: 45,
-    at: 0.86,
-  },
-  {
-    _key: 'l1',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 30,
-    y: 88,
-    scale: 0.9,
-    rotate: -30,
-    at: 0.12,
-  },
-  {
-    _key: 'l2',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 52,
-    y: 80,
-    scale: 0.8,
-    rotate: 35,
-    at: 0.18,
-  },
-  {
-    _key: 'r1',
-    kind: 'rose',
-    tone: 'purple',
-    x: 22,
-    y: 78,
-    scale: 1.1,
-    rotate: -8,
-    at: 0.22,
-  },
-  {
-    _key: 'r2',
-    kind: 'rose',
-    tone: 'purple',
-    x: 40,
-    y: 74,
-    scale: 0.95,
-    rotate: 12,
-    at: 0.28,
-  },
-  {
-    _key: 'l3',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 12,
-    y: 66,
-    scale: 0.85,
-    rotate: -50,
-    at: 0.32,
-  },
-  {
-    _key: 'r3',
-    kind: 'rose',
-    tone: 'blue',
-    x: 30,
-    y: 62,
-    scale: 0.9,
-    rotate: 4,
-    at: 0.4,
-  },
-  {
-    _key: 'r4',
-    kind: 'rose',
-    tone: 'blue',
-    x: 48,
-    y: 60,
-    scale: 0.8,
-    rotate: -14,
-    at: 0.45,
-  },
-  {
-    _key: 'l4',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 60,
-    y: 52,
-    scale: 0.75,
-    rotate: 40,
-    at: 0.5,
-  },
-  {
-    _key: 'r5',
-    kind: 'rose',
-    tone: 'pink',
-    x: 24,
-    y: 48,
-    scale: 1.25,
-    rotate: 6,
-    at: 0.56,
-  },
-  {
-    _key: 'r6',
-    kind: 'rose',
-    tone: 'pink',
-    x: 42,
-    y: 44,
-    scale: 1,
-    rotate: -10,
-    at: 0.62,
-  },
-  {
-    _key: 'b1',
-    kind: 'bud',
-    tone: 'pink',
-    x: 14,
-    y: 38,
-    scale: 0.8,
-    rotate: -20,
-    at: 0.68,
-  },
-  {
-    _key: 'l5',
-    kind: 'leaf',
-    tone: 'leaf',
-    x: 34,
-    y: 34,
-    scale: 0.7,
-    rotate: -35,
-    at: 0.72,
-  },
-  {
-    _key: 'b2',
-    kind: 'bud',
-    tone: 'purple',
-    x: 54,
-    y: 32,
-    scale: 0.7,
-    rotate: 18,
-    at: 0.78,
-  },
-  {
-    _key: 'b3',
-    kind: 'bud',
-    tone: 'blue',
-    x: 28,
-    y: 24,
-    scale: 0.65,
-    rotate: -6,
-    at: 0.84,
-  },
-  {
-    _key: 'r7',
-    kind: 'rose',
-    tone: 'pink',
-    x: 38,
-    y: 18,
-    scale: 0.85,
-    rotate: 8,
-    at: 0.9,
-  },
-];
+} satisfies PaintedArt;
 
 export const mockPage: Page = {
   sections: [
@@ -234,7 +37,7 @@ export const mockPage: Page = {
       name: 'נועה לוי',
       subtitle: 'איפור כלות וערב',
       scrollCue: 'גללי',
-      bouquet,
+      art,
     },
     {
       _type: 'portfolio',

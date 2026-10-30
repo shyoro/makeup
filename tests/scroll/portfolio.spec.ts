@@ -1,34 +1,83 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// Portfolio photos open through an arch-shaped clip as they scroll into view,
-// while the box keeps its locked 4:5 shape whether or not the image loaded.
-
-const OPEN = /^inset\(0(%|px)?[\s)]/;
+// Portfolio photos rise gently out of the page's background tone as they
+// scroll in, inside fixed frames with soft 5px corners, while the background
+// drifts through her colours.
 
 async function revealState(page: Page) {
   return page.evaluate(() => {
     const wrap = document.querySelector<HTMLElement>('[data-reveal]')!;
     const img = wrap.querySelector('img')!;
     const m = new DOMMatrix(getComputedStyle(img).transform);
-    return { clip: getComputedStyle(wrap).clipPath, scale: m.a };
+    return { opacity: Number(getComputedStyle(wrap).opacity), scale: m.a };
   });
+}
+
+async function strongestTone(page: Page) {
+  return page
+    .locator('[data-tone]')
+    .evaluateAll((els) =>
+      Math.max(...els.map((el) => Number(getComputedStyle(el).opacity))),
+    );
 }
 
 test('photos reveal on scroll', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('load');
-  const before = await revealState(page);
-  expect(before.clip).not.toBe('none');
-  expect(before.clip).not.toMatch(OPEN);
+  expect((await revealState(page)).opacity).toBeLessThan(0.05);
 
   await page
     .locator('[data-reveal]')
     .first()
-    .evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    .evaluate((el) => el.scrollIntoView({ block: 'start' }));
   await page.waitForTimeout(1200);
   const after = await revealState(page);
-  expect(after.clip).toMatch(OPEN);
+  expect(after.opacity).toBeGreaterThan(0.99);
   expect(Math.abs(after.scale - 1)).toBeLessThan(0.01);
+});
+
+test('every photo is fully revealed at the bottom of the page', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(1500);
+  const opacities = await page
+    .locator('[data-reveal]')
+    .evaluateAll((els) =>
+      els.map((el) => Number(getComputedStyle(el).opacity)),
+    );
+  for (const o of opacities) expect(o).toBeGreaterThan(0.99);
+});
+
+test('photo frames have gentle 5px corners', async ({ page }) => {
+  await page.goto('/');
+  const radii = await page
+    .locator('[data-reveal] [data-media]')
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const s = getComputedStyle(el);
+        return [s.borderStartStartRadius, s.borderEndEndRadius];
+      }),
+    );
+  expect(radii.length).toBeGreaterThan(0);
+  for (const r of radii) expect(r).toEqual(['5px', '5px']);
+});
+
+test('the background tone shifts while scrolling the portfolio', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  const before = await strongestTone(page);
+  await page.locator('[data-scene="portfolio"]').evaluate((el) => {
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, top + el.offsetHeight * 0.4);
+  });
+  await page.waitForTimeout(1200);
+  expect(before).toBeLessThan(0.02);
+  expect(await strongestTone(page)).toBeGreaterThan(0.1);
 });
 
 test('portfolio slots keep 4:5 before images load', async ({ page }) => {
@@ -50,11 +99,13 @@ test('portfolio visible with JavaScript disabled', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto('/');
-  const clips = await page
+  const opacities = await page
     .locator('[data-reveal]')
-    .evaluateAll((els) => els.map((el) => getComputedStyle(el).clipPath));
-  expect(clips.length).toBeGreaterThan(0);
-  for (const c of clips) expect(c).toBe('none');
+    .evaluateAll((els) =>
+      els.map((el) => Number(getComputedStyle(el).opacity)),
+    );
+  expect(opacities.length).toBeGreaterThan(0);
+  for (const o of opacities) expect(o).toBe(1);
   await context.close();
 });
 
@@ -74,64 +125,4 @@ test('no horizontal overflow after resize', async ({ page }) => {
     );
     expect(overflow, `overflow at ${size.width}×${size.height}`).toBe(false);
   }
-});
-
-test('every photo is fully open at the bottom of the page', async ({
-  page,
-}) => {
-  await page.goto('/');
-  await page.waitForLoadState('load');
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await page.waitForTimeout(1500);
-  const clips = await page
-    .locator('[data-reveal]')
-    .evaluateAll((els) => els.map((el) => getComputedStyle(el).clipPath));
-  for (const c of clips) expect(c).toMatch(OPEN);
-});
-
-test('the arch opens symmetrically mid-reveal', async ({ page }) => {
-  await page.goto('/');
-  await page.waitForLoadState('load');
-  // Put the first photo's top at ~70% of the viewport: between the trigger's
-  // start (top 85%) and end, so the reveal is part-way.
-  await page
-    .locator('[data-reveal]')
-    .first()
-    .evaluate((el) => {
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo(0, top - window.innerHeight * 0.7);
-    });
-  await page.waitForTimeout(1200);
-  const clip = await page
-    .locator('[data-reveal]')
-    .first()
-    .evaluate((el) => getComputedStyle(el).clipPath);
-  const m = /^inset\(([^)]*?)(?: round ([^)]*))?\)$/.exec(clip);
-  expect(m, clip).not.toBeNull();
-  const v = m![1].trim().split(/\s+/);
-  const [t, r = t, , l = r] = v;
-  expect(parseFloat(t!), `${clip} should be part-way`).toBeGreaterThan(0);
-  expect(parseFloat(t!)).toBeLessThan(100);
-  expect(r, `left/right insets differ in ${clip}`).toBe(l);
-  const radii = (m![2] ?? '').trim().split(/\s+/);
-  expect(radii[0], `top corners differ in ${clip}`).toBe(radii[1] ?? radii[0]);
-});
-
-test('the vine is fully drawn at the bottom of the page', async ({ page }) => {
-  const warnings: string[] = [];
-  page.on('console', (msg) => {
-    if (/vector-effect/i.test(msg.text())) warnings.push(msg.text());
-  });
-  await page.goto('/');
-  await page.waitForLoadState('load');
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await page.waitForTimeout(1500);
-  const { drawn, length } = await page
-    .locator('[data-vine-path]')
-    .evaluate((p: SVGPathElement) => ({
-      drawn: parseFloat(getComputedStyle(p).strokeDasharray),
-      length: p.getTotalLength(),
-    }));
-  expect(warnings).toEqual([]);
-  expect(drawn).toBeGreaterThan(length - 1);
 });

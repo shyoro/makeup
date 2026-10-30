@@ -18,26 +18,13 @@ export interface MediaImage {
   image: SanityImageRef;
 }
 
-export type FlowerTone = 'pink' | 'blue' | 'purple' | 'leaf';
-
 /**
- * One flower or leaf in the opening bouquet.
- * x, y: percent of the bouquet box (0–100); x is measured from the
- * inline-start edge, so the bouquet mirrors with the page direction.
- * at: 0–1, the point in the scene's scroll progress where it blooms.
- * image: a future scan of her painting; when absent the placeholder SVG for
- * `kind` is drawn in the `tone` colour.
+ * Her painting in two aligned layers of the same size: the ink drawing alone,
+ * and the finished colour work. Both are transparent cut-outs held in Sanity.
  */
-export interface BouquetPiece {
-  _key: string;
-  kind: 'rose' | 'bud' | 'leaf';
-  tone: FlowerTone;
-  x: number;
-  y: number;
-  scale: number;
-  rotate: number;
-  at: number;
-  image?: SanityImageRef;
+export interface PaintedArt {
+  line: SanityImageRef;
+  color: SanityImageRef;
 }
 
 export interface HeroSection {
@@ -46,7 +33,7 @@ export interface HeroSection {
   name: string;
   subtitle: string;
   scrollCue?: string;
-  bouquet: BouquetPiece[];
+  art: PaintedArt;
 }
 
 export interface PortfolioSection {

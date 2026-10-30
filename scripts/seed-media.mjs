@@ -1,6 +1,8 @@
 /* global process, console, fetch, Buffer */
-// One-off: upload freely licensed stock photos to Sanity as image assets, so
-// the mock page can reference them by asset ID until her real photos arrive.
+// Upload images to Sanity as image assets and print their asset IDs.
+//   node scripts/seed-media.mjs              → the stock photos below
+//   node scripts/seed-media.mjs <file> ...   → local files, e.g. her artwork
+// Her own files are passed in by path and never committed (public repo).
 // Shai runs this; the write token stays in .env and never leaves this machine.
 // Re-running is harmless: Sanity deduplicates identical files by hash.
 // See docs/superpowers/specs/2026-10-30-scroll-story-design.md §8a.
@@ -42,20 +44,32 @@ const client = createClient({
   useCdn: false,
 });
 
-const results = [];
-for (const { key, id } of SOURCES) {
-  const res = await fetch(`${UNSPLASH}/photo-${id}?w=2000&fm=jpg&q=85`);
-  if (!res.ok) {
-    console.error(`seed-media: ${key} download failed (${res.status})`);
-    process.exit(1);
-  }
-  const buffer = Buffer.from(await res.arrayBuffer());
-  const asset = await client.assets.upload('image', buffer, {
-    filename: `${key}.jpg`,
-  });
+async function upload(key, buffer, filename) {
+  const asset = await client.assets.upload('image', buffer, { filename });
   const { width, height } = asset.metadata.dimensions;
-  results.push({ key, assetId: asset._id, width, height });
   console.error(`seed-media: uploaded ${key}`);
+  return { key, assetId: asset._id, width, height };
+}
+
+const results = [];
+const files = process.argv.slice(2);
+if (files.length) {
+  const { readFile } = await import('node:fs/promises');
+  const { basename } = await import('node:path');
+  for (const file of files) {
+    const name = basename(file);
+    results.push(await upload(name, await readFile(file), name));
+  }
+} else {
+  for (const { key, id } of SOURCES) {
+    const res = await fetch(`${UNSPLASH}/photo-${id}?w=2000&fm=jpg&q=85`);
+    if (!res.ok) {
+      console.error(`seed-media: ${key} download failed (${res.status})`);
+      process.exit(1);
+    }
+    const buffer = Buffer.from(await res.arrayBuffer());
+    results.push(await upload(key, buffer, `${key}.jpg`));
+  }
 }
 
 console.log(JSON.stringify(results, null, 2));
