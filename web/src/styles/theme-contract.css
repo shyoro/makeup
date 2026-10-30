@@ -74,6 +74,8 @@
   --color-powder-peach: var(--role-powder-peach);
   --color-powder-lilac: var(--role-powder-lilac);
   --color-blush: var(--role-blush);
+  --color-wash-blush: var(--role-wash-blush);
+  --color-wash-peach: var(--role-wash-peach);
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -87,6 +89,7 @@
   --spacing-section: var(--role-space-section);
   --spacing-scene: var(--role-scene-track);
   --spacing-scene-hold: var(--role-scene-hold);
+  --spacing-scene-overlap: var(--role-scene-overlap);
 
   /* --- LOCKED aspect ratios --------------------------------------------
      Changing these after the client uploads a library means she re-crops

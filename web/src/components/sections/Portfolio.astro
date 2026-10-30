@@ -1,8 +1,10 @@
 ---
 // Portfolio as a scroll story: full-screen photo scenes and text sections
 // take turns, so the page moves between pictures and words as she scrolls,
-// with photo pairs in between. Block order comes from data.
+// with photo pairs in between and a closing action at the end. Block order
+// comes from data; how each text section is laid out is decided here.
 import type { PortfolioSection, StoryBlock } from '../../lib/sanity/types';
+import InkFilter from './story/InkFilter.astro';
 import Pair from './story/Pair.astro';
 import Scene from './story/Scene.astro';
 import TextPanel from './story/TextPanel.astro';
@@ -13,50 +15,108 @@ interface Props {
 
 const { section } = Astro.props;
 
-// Scenes alternate the colour they wash into; text sections alternate the
-// turn of the flowers behind them (the heading section takes the first).
-const TONES = ['blush', 'peach'] as const;
-const TURNS = [90, 180] as const;
+type Align = 'start' | 'end' | 'center';
+type Place = `${'top' | 'bottom'}-${'start' | 'end'}`;
+
 const alternate = <T,>(pair: readonly [T, T], i: number): T =>
   i % 2 === 0 ? pair[0] : pair[1];
+
+// Text sections, the heading first, take turns: words to one side and then
+// the other (statement lines and the closing are centred), flowers in the
+// opposite corner, top then bottom, turned 90° then 180°.
+let texts = 0;
+let sides = 0;
+function textLayout(centred: boolean) {
+  const t = texts++;
+  const align: Align = centred
+    ? 'center'
+    : alternate(['start', 'end'] as const, sides++);
+  const block = alternate(['top', 'bottom'] as const, t);
+  const inline =
+    align === 'center'
+      ? alternate(['start', 'end'] as const, t)
+      : align === 'start'
+        ? 'end'
+        : 'start';
+  return {
+    align,
+    place: `${block}-${inline}` satisfies Place,
+    // Centred words leave room only at the sides: the upright quarter turn.
+    turn: align === 'center' ? 90 : alternate([90, 180] as const, t),
+  };
+}
+
+const heading = textLayout(false);
+// Scenes alternate the colour they wash into.
 let scenes = 0;
-let texts = 1;
-const blocks = section.blocks.map((block: StoryBlock) => ({
-  block,
-  tone: alternate(TONES, block._type === 'scene' ? scenes++ : 0),
-  turn: alternate(TURNS, block._type === 'text' ? texts++ : 0),
-}));
+const story = section.blocks.map((block: StoryBlock) => {
+  switch (block._type) {
+    case 'scene':
+      return {
+        ...block,
+        tone: alternate(['blush', 'peach'] as const, scenes++),
+      };
+    case 'pair':
+      return block;
+    case 'text':
+      return { ...block, layout: textLayout(Boolean(block.statement)) };
+    case 'closing':
+      return { ...block, layout: textLayout(true) };
+  }
+});
+
+const body = 'mt-4 text-lg leading-relaxed text-ink md:text-xl';
 ---
 
-<section data-scene="portfolio" class="relative">
-  <TextPanel flowers={section.flowers} turn={TURNS[0]}>
+{/* Rises over the opening's last stretch: see --role-scene-overlap. */}
+<section data-scene="portfolio" class="relative -mt-scene-overlap">
+  <InkFilter />
+  <TextPanel flowers={section.flowers} {...heading}>
     <h2 class="font-display text-5xl leading-none md:text-7xl">
       {section.title}
     </h2>
-    {section.intro && (
-      <p class="mt-4 text-lg leading-relaxed text-ink-muted md:text-xl">
-        {section.intro}
-      </p>
-    )}
+    {section.intro && <p class={body}>{section.intro}</p>}
     {section.startingPrice && (
-      <p class="mt-2 text-ink-muted">
+      <p class="mt-4 text-lg text-ink md:text-xl">
         איפור כלה החל מ־<span dir="ltr">{section.startingPrice} ₪</span>
       </p>
     )}
   </TextPanel>
 
-  {blocks.map(({ block, tone, turn }) => {
+  {story.map((block) => {
     if (block._type === 'scene')
-      return <Scene media={block.media} tone={tone} />;
+      return <Scene media={block.media} tone={block.tone} />;
     if (block._type === 'pair') return <Pair items={block.items} />;
+    if (block._type === 'closing')
+      return (
+        <TextPanel flowers={section.flowers} {...block.layout}>
+          <div data-closing>
+            <h3 class="font-display text-5xl leading-tight md:text-7xl">
+              {block.title}
+            </h3>
+            <p class={body}>{block.body}</p>
+            <a
+              href={block.action.href}
+              class="mt-8 inline-flex min-h-12 items-center rounded-card bg-accent px-8 text-lg text-on-accent transition-opacity hover:opacity-90"
+            >
+              {block.action.label}
+            </a>
+          </div>
+        </TextPanel>
+      );
     return (
-      <TextPanel flowers={section.flowers} turn={turn}>
-        <h3 class="font-display text-4xl leading-tight md:text-6xl">
+      <TextPanel flowers={section.flowers} {...block.layout}>
+        <h3
+          class:list={[
+            'font-display',
+            block.statement
+              ? 'text-6xl leading-none md:text-8xl'
+              : 'text-5xl leading-tight md:text-7xl',
+          ]}
+        >
           {block.title}
         </h3>
-        <p class="mt-4 text-lg leading-relaxed text-ink-muted md:text-xl">
-          {block.body}
-        </p>
+        <p class={body}>{block.body}</p>
       </TextPanel>
     );
   })}

@@ -16,6 +16,18 @@
   --role-powder-peach: #f2c6ad;
   --role-powder-lilac: #a77aa8;
   --role-blush: #e9b3c2;
+  /* The colour a photo washes into as words scroll over it: the tone, a
+     quarter of the way to the surface, so it lifts the photo, not muddies it. */
+  --role-wash-blush: color-mix(
+    in oklab,
+    var(--role-blush) 75%,
+    var(--role-surface)
+  );
+  --role-wash-peach: color-mix(
+    in oklab,
+    var(--role-powder-peach) 75%,
+    var(--role-surface)
+  );
 
   --role-font-display: 'Frank Ruhl Libre', serif;
   --role-font-ui: 'Assistant', sans-serif;
@@ -23,7 +35,10 @@
   --role-radius-card: 0.3125rem; /* ~5px: gentle, fixed photo corners */
   --role-space-section: 4rem;
   /* Scroll length of a sticky scene: how long the opening plays. */
-  --role-scene-track: 250svh;
+  --role-scene-track: 200svh;
+  /* How far the story rises over the end of the opening, so its first words
+     arrive as the painting dims instead of after it has gone. */
+  --role-scene-overlap: 50svh;
   /* Scroll length of a full-screen photo scene: fade in, hold, wash out. */
   --role-scene-hold: 160svh;
 }

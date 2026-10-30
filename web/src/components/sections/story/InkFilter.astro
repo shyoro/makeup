@@ -1,0 +1,15 @@
+---
+// Redraws her line art in the ink colour, the site's black: strengthen the
+// art's pale strokes, then flood with ink inside them. Rendered once by Portfolio.astro; Flowers.astro
+// points at it by id. The flood takes the ink token through currentColor.
+---
+
+<svg aria-hidden="true" class="absolute size-0 text-ink">
+  <filter id="flowers-ink" color-interpolation-filters="sRGB">
+    <feComponentTransfer in="SourceAlpha" result="strokes">
+      <feFuncA type="linear" slope="2.5"></feFuncA>
+    </feComponentTransfer>
+    <feFlood flood-color="currentColor"></feFlood>
+    <feComposite in2="strokes" operator="in"></feComposite>
+  </filter>
+</svg>

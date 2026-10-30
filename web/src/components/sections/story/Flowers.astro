@@ -1,15 +1,20 @@
 ---
-// Her ink drawing in black and white, turned a quarter or half turn, growing
-// along the spray as its text section scrolls through. Decorative only.
+// Her ink drawing, turned a quarter or half turn, growing along the spray from
+// one corner of its text section as it scrolls into view, bleeding off the
+// side of the screen and clear of the words. Drawn in ink by InkFilter.astro over the CDN's
+// black-and-white version. Decorative only.
 import type { MediaImage, SanityImageRef } from '../../../lib/sanity/types';
 import Media from '../../media/Media.astro';
 
 interface Props {
   image: SanityImageRef;
   turn: 90 | 180;
+  place: 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end';
 }
 
-const { image, turn } = Astro.props;
+const { image, turn, place } = Astro.props;
+const top = place.startsWith('top');
+const start = place.endsWith('start');
 
 const media: MediaImage = {
   kind: 'image',
@@ -20,14 +25,23 @@ const media: MediaImage = {
 ---
 
 <div
-  class="absolute inset-0 flex items-center justify-center"
+  class:list={[
+    'absolute inset-0 flex',
+    top ? 'items-start' : 'items-end',
+    start ? 'justify-start' : 'justify-end',
+  ]}
   aria-hidden="true"
 >
   <div
     data-flowers
     class:list={[
-      'relative aspect-editorial w-3/2 shrink-0 opacity-25 md:w-1/2',
-      turn === 90 ? 'rotate-90' : 'rotate-180',
+      'relative aspect-editorial shrink-0 opacity-50',
+      // A half turn lies wide and can grow larger than an upright quarter.
+      turn === 90 ? 'w-4/5 rotate-90 md:w-1/2' : 'w-full rotate-180 md:w-3/5',
+      // Inside the section top to bottom (its edge would cut them mid-
+      // screen), bleeding off the side of the screen.
+      top ? 'mt-12 md:mt-32' : 'mb-12 md:mb-32',
+      start ? '-ms-16' : '-me-16',
     ]}
   >
     <div data-wipe="line" class="absolute inset-0 overflow-hidden">
@@ -37,13 +51,21 @@ const media: MediaImage = {
           fit="contain"
           mono
           widths={[800, 1200, 1600]}
-          sizes="(min-width: 768px) 50vw, 150vw"
+          sizes="(min-width: 768px) 60vw, 100vw"
           class="size-full"
         />
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  /* On Media's own box, not the moving layer, so the filter is drawn once
+     into that layer rather than on every frame of the sweep. */
+  [data-flowers] :global([data-media]) {
+    filter: url(#flowers-ink);
+  }
+</style>
 
 <script>
   import { gsap, ScrollTrigger } from '../../../lib/motion/gsap';
@@ -66,10 +88,11 @@ const media: MediaImage = {
       ease: 'none',
       onUpdate: render,
       scrollTrigger: {
-        trigger: box.closest('[data-panel]') ?? box,
-        // Grows while it is on screen: from 40% up until it fills the screen.
-        start: 'top 60%',
-        end: 'top top',
+        // Grows while it is on screen: from entering until its middle
+        // reaches the middle of the screen.
+        trigger: box,
+        start: 'top bottom',
+        end: 'center 50%',
         scrub: 0.5,
       },
     });

@@ -49,6 +49,8 @@ export interface StoryText {
   _key: string;
   title: string;
   body: string;
+  /** Set it larger and centred, as the story's statement line. */
+  statement?: boolean;
 }
 
 /** Two photos side by side. */
@@ -58,7 +60,22 @@ export interface StoryPair {
   items: [MediaImage, MediaImage];
 }
 
-export type StoryBlock = StoryScene | StoryText | StoryPair;
+/** A link to act on; where it points comes from Sanity, never the code. */
+export interface Action {
+  label: string;
+  href: string;
+}
+
+/** The last words of the story, with the one clear action. */
+export interface StoryClosing {
+  _type: 'closing';
+  _key: string;
+  title: string;
+  body: string;
+  action: Action;
+}
+
+export type StoryBlock = StoryScene | StoryText | StoryPair | StoryClosing;
 
 export interface PortfolioSection {
   _type: 'portfolio';

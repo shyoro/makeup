@@ -1,9 +1,31 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// The portfolio is a scroll story: full-screen photo scenes that fade in,
-// settle from a subtle zoom and wash out into her colours as a text section
-// scrolls over them; text sections carry her flowers in black and white,
-// turned 90° and 180°, growing as they pass; photo pairs sit between.
+declare global {
+  interface Window {
+    /** Opacity times every ancestor's; 0 when hidden. */
+    opacityOf(el: Element): number;
+  }
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.opacityOf = (el) => {
+      let o = 1;
+      for (let n: Element | null = el; n; n = n.parentElement) {
+        const s = getComputedStyle(n);
+        if (s.visibility === 'hidden') return 0;
+        o *= Number(s.opacity);
+      }
+      return o;
+    };
+  });
+});
+
+// The portfolio is a scroll story: full-screen photo scenes that fade in as
+// the words before them dissolve, settle from a subtle zoom and wash out into
+// her colours as the next text section scrolls over them; text sections carry
+// her flowers in ink, turned 90° and 180°, growing beside the words; photo
+// pairs sit between, and the story ends on a way to book.
 
 /** Scroll so the element's top sits at `at` (0 = viewport top, 1 = bottom). */
 async function placeTop(page: Page, selector: string, at: number, nth = 0) {
@@ -54,6 +76,76 @@ test('a scene fades in full-screen as it scrolls in', async ({ page }) => {
   expect((await sceneState(page)).shown).toBeGreaterThan(0.95);
 });
 
+test('a photo fades in as the words before it dissolve', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  // The first scene follows the portfolio's heading section: midway
+  // through the words' hand-over to it.
+  await placeTop(page, '[data-story-scene]', 0.72);
+  const photo = (await sceneState(page)).shown;
+  const words = await page
+    .locator('[data-panel-text]')
+    .first()
+    .evaluate((el) => window.opacityOf(el));
+  expect(photo).toBeGreaterThan(0.15);
+  expect(photo).toBeLessThan(0.85);
+  expect(words).toBeGreaterThan(0.05);
+  expect(words).toBeLessThan(0.95);
+});
+
+test('every screen of the story shows a photo or words', async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  const start = Number(
+    await page.locator('[data-scene="hero"]').getAttribute('data-end'),
+  );
+  const { end, vh } = await page.evaluate(() => ({
+    end: document.documentElement.scrollHeight - innerHeight,
+    vh: innerHeight,
+  }));
+  const empty: number[] = [];
+  for (let y = start; y <= end; y += vh / 4) {
+    await page.evaluate((y) => window.scrollTo(0, y), y);
+    await page.waitForTimeout(700);
+    const seen = await page.evaluate(() => {
+      // Words and pair photos count across the middle of the screen, not
+      // sliding in or out at an edge. A cross-fade counts as full when the
+      // photo and the words together make up most of one.
+      const inView = (el: Element) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > innerHeight * 0.2 && r.top < innerHeight * 0.8;
+      };
+      const most = (els: Element[]) =>
+        Math.max(0, ...els.map((el) => window.opacityOf(el)));
+      const photo = most([
+        ...document.querySelectorAll('[data-story-scene] [data-fade]'),
+      ]);
+      const content = most(
+        [
+          ...document.querySelectorAll(
+            '[data-panel-text], [data-reveal], [data-scene="hero"] [data-art]',
+          ),
+        ].filter(inView),
+      );
+      return photo + content >= 0.6;
+    });
+    if (!seen) empty.push(Math.round((y / vh) * 100) / 100);
+  }
+  expect(empty, 'scroll positions, in screens, with nothing to see').toEqual(
+    [],
+  );
+});
+
+test('full-screen photos keep their focal point in frame', async ({ page }) => {
+  await page.goto('/');
+  const position = await page
+    .locator('[data-story-scene] img')
+    .first()
+    .evaluate((img) => getComputedStyle(img).objectPosition);
+  expect(position).not.toBe('50% 50%');
+});
+
 test('scene photos settle from a subtle zoom', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('load');
@@ -73,7 +165,15 @@ test('the photo washes into her colour as the next text arrives, then leaves', a
   await page.waitForLoadState('load');
   // The text section after the first scene, half-way up the screen.
   await placeTop(page, '[data-panel]', 0.5, 1);
-  expect((await sceneState(page)).wash).toBeGreaterThan(0.5);
+  const { wash } = await sceneState(page);
+  expect(wash).toBeGreaterThan(0.5);
+  // A veil of colour, not a slab: capped, and graded from the words' side.
+  expect(wash).toBeLessThanOrEqual(0.7);
+  const fill = await page
+    .locator('[data-wash]')
+    .first()
+    .evaluate((el) => getComputedStyle(el).backgroundImage);
+  expect(fill).toContain('linear-gradient');
   // Fully over the text: the photo is gone.
   await placeTop(page, '[data-panel]', 0, 1);
   expect((await sceneState(page)).shown).toBeLessThan(0.05);
@@ -99,53 +199,104 @@ test('text sections sit above the photos', async ({ page }) => {
   expect(onTop).toBe(true);
 });
 
-test('text sections carry black and white flowers turned 90° and 180°', async ({
+test('text sections carry her flowers in ink, turned 90° and 180°', async ({
   page,
 }) => {
   await page.goto('/');
   const flowers = await page
     .locator('[data-panel] [data-flowers]')
     .evaluateAll((els) =>
-      els.map((el) => ({
-        rotate: getComputedStyle(el).rotate,
-        mono: el
-          .querySelector('img')!
-          .getAttribute('srcset')!
-          .includes('sat=-100'),
-      })),
+      els.map((el) => {
+        const img = el.querySelector('img')!;
+        return {
+          rotate: getComputedStyle(el).rotate,
+          opacity: Number(getComputedStyle(el).opacity),
+          mono: img.getAttribute('srcset')!.includes('sat=-100'),
+          ink: getComputedStyle(el.querySelector('[data-media]')!).filter,
+        };
+      }),
     );
   expect(flowers.length).toBeGreaterThanOrEqual(2);
   expect(flowers.map((f) => f.rotate)).toEqual(
     expect.arrayContaining(['90deg', '180deg']),
   );
-  for (const f of flowers) expect(f.mono).toBe(true);
+  for (const f of flowers) {
+    expect(f.mono).toBe(true);
+    expect(f.ink).toContain('url(');
+    expect(f.opacity).toBeGreaterThanOrEqual(0.4);
+    expect(f.opacity).toBeLessThanOrEqual(0.55);
+  }
 });
 
-test('the flowers grow as their text section scrolls through', async ({
-  page,
-}) => {
-  const covered = () =>
-    page
-      .locator('[data-panel]')
-      .nth(1)
-      .evaluate((panel) => {
-        // Sample the art box's centre: uncovered part-way through the sweep.
-        const box = panel
-          .querySelector('[data-flowers]')!
-          .getBoundingClientRect();
-        const x = box.left + box.width / 2;
-        const y = box.top + box.height / 2;
-        if (y < 0 || y > innerHeight) return null;
-        return document
-          .elementsFromPoint(x, y)
-          .some((el) => el.closest('[data-flowers] [data-wipe]'));
-      });
+test('the flowers stay clear of the words', async ({ page }) => {
+  await page.goto('/');
+  const overlaps = await page.locator('[data-panel]').evaluateAll((panels) =>
+    panels.map((panel) => {
+      const t = panel
+        .querySelector('[data-panel-text]')!
+        .getBoundingClientRect();
+      const f = panel.querySelector('[data-flowers]')!.getBoundingClientRect();
+      const w = Math.max(
+        0,
+        Math.min(t.right, f.right) - Math.max(t.left, f.left),
+      );
+      const h = Math.max(
+        0,
+        Math.min(t.bottom, f.bottom) - Math.max(t.top, f.top),
+      );
+      return Math.round(((w * h) / (t.width * t.height)) * 100) / 100;
+    }),
+  );
+  expect(overlaps.length).toBeGreaterThan(0);
+  for (const o of overlaps) expect(o).toBeLessThan(0.25);
+});
+
+test('the flowers grow as they scroll into view', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('load');
-  await placeTop(page, '[data-panel]', 0.45, 1);
-  expect(await covered()).toBe(false);
-  await placeTop(page, '[data-panel]', 0, 1);
-  expect(await covered()).toBe(true);
+  const flowers = page.locator('[data-panel] [data-flowers]').nth(1);
+  // Scroll so the box's top (or centre) sits at `at` of the screen.
+  const place = async (edge: 'top' | 'center', at: number) => {
+    await flowers.evaluate(
+      (el, [edge, at]) => {
+        const r = el.getBoundingClientRect();
+        const y = edge === 'top' ? r.top : r.top + r.height / 2;
+        window.scrollTo(0, window.scrollY + y - innerHeight * Number(at));
+      },
+      [edge, at] as const,
+    );
+    await page.waitForTimeout(1200);
+  };
+  // Share of the box's visible part that the sweep has uncovered.
+  const uncovered = () =>
+    flowers.evaluate((box) => {
+      // Visible part: inside the screen and its section (which clips it).
+      const r = box.getBoundingClientRect();
+      const p = box.closest('[data-panel]')!.getBoundingClientRect();
+      const top = Math.max(r.top, p.top, 0);
+      const bottom = Math.min(r.bottom, p.bottom, innerHeight);
+      const left = Math.max(r.left, p.left, 0);
+      const right = Math.min(r.right, p.right, innerWidth);
+      let hits = 0;
+      for (let i = 0.5; i < 6; i++)
+        for (let j = 0.5; j < 6; j++) {
+          const x = left + ((right - left) * i) / 6;
+          const y = top + ((bottom - top) * j) / 6;
+          if (
+            document
+              .elementsFromPoint(x, y)
+              .some((el) => box.contains(el) && el.closest('[data-wipe]'))
+          )
+            hits++;
+        }
+      return hits / 36;
+    });
+  await place('top', 0.85);
+  const early = await uncovered();
+  await place('center', 0.4);
+  const late = await uncovered();
+  expect(late).toBeGreaterThan(0.8);
+  expect(late - early).toBeGreaterThan(0.3);
 });
 
 test('pair photos reveal on scroll inside 5px frames', async ({ page }) => {
@@ -171,6 +322,22 @@ test('pair photos reveal on scroll inside 5px frames', async ({ page }) => {
   for (const r of radii) expect(r).toEqual(['5px', '5px']);
 });
 
+test('on phones the pair photos stack, large', async ({ page }) => {
+  test.skip(page.viewportSize()!.width >= 768, 'phones only');
+  await page.goto('/');
+  const rects = await page
+    .locator('[data-pair] [data-reveal]')
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return { width: r.width / innerWidth, top: r.top, bottom: r.bottom };
+      }),
+    );
+  expect(rects).toHaveLength(2);
+  for (const r of rects) expect(r.width).toBeGreaterThan(0.78);
+  expect(rects[1]!.top).toBeGreaterThan(rects[0]!.bottom);
+});
+
 test('pair slots keep 4:5 before images load', async ({ page }) => {
   await page.route('**/cdn.sanity.io/**', () => {
     // never respond: images stay pending
@@ -186,6 +353,66 @@ test('pair slots keep 4:5 before images load', async ({ page }) => {
     );
   expect(ratios.length).toBeGreaterThan(0);
   for (const r of ratios) expect(Math.abs(r - 0.8)).toBeLessThan(0.01);
+});
+
+test('text sections vary in placement and scale', async ({ page }) => {
+  await page.goto('/');
+  const panels = await page
+    .locator('[data-panel] [data-panel-text]')
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        const h3 = el.querySelector('h3');
+        return {
+          placement: `${Math.round(((r.left + r.width / 2) / innerWidth) * 10)}:${getComputedStyle(el).textAlign}`,
+          size: h3 ? parseFloat(getComputedStyle(h3).fontSize) : null,
+        };
+      }),
+    );
+  expect(new Set(panels.map((p) => p.placement)).size).toBeGreaterThanOrEqual(
+    2,
+  );
+  // One section carries a larger statement line.
+  const sizes = panels.flatMap((p) => (p.size ? [p.size] : []));
+  expect(Math.max(...sizes) / Math.min(...sizes)).toBeGreaterThan(1.2);
+});
+
+test('the words read in full ink, the price at body size', async ({ page }) => {
+  await page.goto('/');
+  const INK = 'rgb(59, 35, 64)';
+  const bodies = await page
+    .locator('[data-panel-text] h3 + p')
+    .evaluateAll((els) => els.map((el) => getComputedStyle(el).color));
+  expect(bodies.length).toBeGreaterThan(0);
+  for (const c of bodies) expect(c).toBe(INK);
+  const price = await page
+    .locator('[data-scene="portfolio"] p', { hasText: '₪' })
+    .first()
+    .evaluate((el) => ({
+      size: parseFloat(getComputedStyle(el).fontSize),
+      color: getComputedStyle(el).color,
+    }));
+  expect(price.size).toBeGreaterThanOrEqual(18);
+  expect(price.color).toBe(INK);
+});
+
+test('the story ends on a clear way to book', async ({ page }) => {
+  await page.goto('/');
+  // The last block of the story holds the action.
+  const last = await page
+    .locator('[data-scene="portfolio"]')
+    .evaluate((section) => {
+      const blocks = [...section.children].filter(
+        (el) => el.tagName !== 'SCRIPT',
+      );
+      return blocks.at(-1)!.querySelectorAll('[data-closing] a').length;
+    });
+  expect(last).toBe(1);
+  const action = page.locator('[data-closing] a');
+  expect(await action.getAttribute('href')).toBeTruthy();
+  const box = (await action.boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.width).toBeGreaterThanOrEqual(44);
 });
 
 test('the story reads top to bottom with JavaScript disabled', async ({

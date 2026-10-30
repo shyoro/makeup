@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 
 // The opening is her painting growing along the spray: the ink drawing sweeps
-// in from the bottom-left first, and the colour follows it as she scrolls.
+// in from the bottom-left on its own at first view, and the colour follows it
+// as she scrolls.
 // Checked by hit-testing points of the art box: a layer only "hits" where its
 // sweep has uncovered it.
 
@@ -37,13 +38,43 @@ async function scrollToHeroEnd(page: Page) {
   await page.waitForTimeout(1200);
 }
 
-test('the drawing starts growing on first view', async ({ page }) => {
+test('the whole ink drawing appears on its own at first view', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.waitForLoadState('load');
   await page.waitForTimeout(2600);
-  expect(await layersAt(page, REAR)).toContain('line');
-  expect(await layersAt(page, REAR)).not.toContain('color');
-  expect(await layersAt(page, LEAD)).toEqual([]);
+  for (const point of [REAR, LEAD]) {
+    expect(await layersAt(page, point)).toContain('line');
+    expect(await layersAt(page, point)).not.toContain('color');
+  }
+});
+
+test('the drawing draws in with a soft edge that comes off once drawn', async ({
+  page,
+}) => {
+  const mask = () =>
+    page
+      .locator('[data-scene="hero"] [data-wipe="line"]')
+      .evaluate((el) => getComputedStyle(el).maskImage);
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  expect(await mask()).toContain('linear-gradient');
+  // A moving mask re-rasterises every frame: none is left for scrolling.
+  await page.waitForLoadState('load');
+  await page.waitForTimeout(3500);
+  expect(await mask()).toBe('none');
+});
+
+test('the scroll cue fades out with the name', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  await scrollToHeroEnd(page);
+  const opacity = (selector: string) =>
+    page
+      .locator(selector)
+      .evaluate((el) => Number(getComputedStyle(el).opacity));
+  expect(await opacity('[data-scene="hero"] [data-title]')).toBeLessThan(0.05);
+  expect(await opacity('[data-scene="hero"] [data-cue]')).toBeLessThan(0.05);
 });
 
 test('scrolling paints the whole spray', async ({ page }) => {

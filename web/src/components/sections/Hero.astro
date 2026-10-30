@@ -1,7 +1,7 @@
 ---
 // Opening scene: her name on a shaded-white stage while her painting grows
-// along the spray — the ink drawing first, then the colour washing in behind
-// it as she scrolls. The stage is native-sticky over a tall track, and only
+// along the spray — the ink drawing draws itself at first view, then the
+// colour washes in behind it as she scrolls. The stage is native-sticky over a tall track, and only
 // transforms and opacity animate. No call to action here (spec §2).
 import type { HeroSection, MediaImage } from '../../lib/sanity/types';
 import Media from '../media/Media.astro';
@@ -69,7 +69,7 @@ const layers = [
     </div>
 
     {section.scrollCue && (
-      <p class="absolute bottom-6 end-6 text-sm text-ink-muted">
+      <p data-cue class="absolute bottom-6 end-6 text-sm text-ink-muted">
         {section.scrollCue} ↓
       </p>
     )}
@@ -80,8 +80,8 @@ const layers = [
   import { gsap, ScrollTrigger } from '../../lib/motion/gsap';
   import { createSweep } from '../../lib/motion/sweep';
 
-  // How far the drawing grows on its own at first view, before any scroll.
-  const INTRO = 0.28;
+  // How long the ink drawing takes to draw itself at first view, in seconds.
+  const DRAW_IN = 1.8;
 
   function whenLoaded(img: HTMLImageElement | null, timeout: number) {
     return new Promise<void>((resolve) => {
@@ -96,19 +96,19 @@ const layers = [
     '[data-scene="hero"]',
   )) {
     const box = scene.querySelector<HTMLElement>('[data-art]');
-    const title = scene.querySelector('[data-title]');
+    const words = scene.querySelectorAll('[data-title], [data-cue]');
     const powder = scene.querySelectorAll('[data-powder] > *');
     if (!box) continue;
 
     const layer = (name: string) =>
       box.querySelector<HTMLElement>(`[data-wipe="${name}"]`)!;
-    const line = createSweep(box, layer('line'));
+    // The drawing plays on its own, with a soft edge; the colour follows
+    // scroll only, with a crisp one (see sweep.ts on soft edges and scroll).
+    const line = createSweep(box, layer('line'), { soft: true });
     const color = createSweep(box, layer('color'));
-    // The drawing's progress is its intro plus what scroll adds; colour is
-    // scroll only, trailing the drawing.
-    const state = { intro: 0, line: 0, color: 0 };
+    const state = { line: 0, color: 0 };
     const render = () => {
-      line.render(state.intro + state.line);
+      line.render(state.line);
       color.render(state.color);
     };
     const layout = () => {
@@ -131,18 +131,19 @@ const layers = [
         },
       },
     });
-    tl.to(state, { line: 1 - INTRO, duration: 0.35, onUpdate: render }, 0)
-      .to(state, { color: 1, duration: 0.45, onUpdate: render }, 0.15)
+    // Colour first, then the name and cue lift away, then the art dims as
+    // the stage leaves: no stretch where nothing moves.
+    tl.to(state, { color: 1, duration: 0.6, onUpdate: render }, 0)
       // No zoom on the art: scaling it re-rasterised both layers every frame.
       .to(powder, { yPercent: -18, duration: 1 }, 0)
-      .to(title, { opacity: 0, y: -32, duration: 0.15 }, 0.85)
-      .to(box, { opacity: 0.4, duration: 0.15 }, 0.85);
+      .to(words, { opacity: 0, y: -32, duration: 0.2 }, 0.5)
+      .to(box, { opacity: 0.6, duration: 0.25 }, 0.75);
 
     whenLoaded(box.querySelector('[data-wipe="line"] img'), 1200).then(() => {
       gsap.to(state, {
-        intro: INTRO,
-        duration: 2.2,
-        ease: 'power2.out',
+        line: 1,
+        duration: DRAW_IN,
+        ease: 'power1.inOut',
         onUpdate: render,
       });
     });

@@ -1,6 +1,7 @@
 ---
-// Two photos side by side, offset, each rising gently into view inside a
-// fixed frame with soft corners. Opacity and transform only.
+// Two photos, each rising gently into view inside a fixed frame with soft
+// corners: on phones stacked large and offset to either side, from tablets
+// side by side. Opacity and transform only.
 import type { MediaImage } from '../../../lib/sanity/types';
 import Media from '../../media/Media.astro';
 
@@ -13,13 +14,19 @@ const { items } = Astro.props;
 
 <div
   data-pair
-  class="relative z-10 grid grid-cols-2 items-start gap-4 px-6 py-section md:gap-12 md:px-16"
+  class="relative z-10 grid grid-cols-1 items-start gap-8 px-6 py-section md:grid-cols-2 md:gap-12 md:px-16"
 >
   {items.map((item, i) => (
-    <div data-reveal class:list={[i === 1 && 'mt-16 md:mt-32']}>
+    <div
+      data-reveal
+      class:list={[
+        'w-11/12 md:w-full',
+        i === 1 ? 'justify-self-end md:mt-32' : 'justify-self-start',
+      ]}
+    >
       <Media
         media={item}
-        sizes="(min-width: 768px) 45vw, 45vw"
+        sizes="(min-width: 768px) 45vw, 85vw"
         class="w-full rounded-card"
       />
     </div>
@@ -42,7 +49,7 @@ const { items } = Astro.props;
         trigger: wrap,
         start: 'top 95%',
         // clamp() keeps the end reachable for photos near the page bottom.
-        end: 'clamp(top 35%)',
+        end: 'clamp(top 60%)',
         scrub: 0.5,
       },
     });

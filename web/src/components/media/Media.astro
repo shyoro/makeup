@@ -33,6 +33,14 @@ const { src, srcset } = imageSrcSet(media.image, media.aspectRatio, {
   mono,
 });
 
+// Where the browser crops a photo itself ('fill'), keep its focal point in
+// frame. 'cover' already crops around it at the CDN; 'contain' never crops.
+const hotspot = media.image.hotspot;
+const focus =
+  fit === 'fill' && hotspot
+    ? `object-position: ${Math.round(hotspot.x * 100)}% ${Math.round(hotspot.y * 100)}%`
+    : undefined;
+
 const aspectClass = {
   hero: 'aspect-hero',
   portrait: 'aspect-portrait',
@@ -52,6 +60,7 @@ const aspectClass = {
     alt={media.alt}
     loading={loading}
     decoding="async"
+    style={focus}
     class:list={[
       'absolute inset-0 size-full',
       fit === 'contain' ? 'object-contain' : 'object-cover',
