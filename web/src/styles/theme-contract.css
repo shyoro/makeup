@@ -71,6 +71,14 @@
   --color-accent: var(--role-accent);
   --color-on-accent: var(--role-on-accent);
   --color-hairline: var(--role-hairline);
+  --color-powder-peach: var(--role-powder-peach);
+  --color-powder-lilac: var(--role-powder-lilac);
+  --color-blush: var(--role-blush);
+  --color-flower-pink: var(--role-flower-pink);
+  --color-flower-blue: var(--role-flower-blue);
+  --color-flower-purple: var(--role-flower-purple);
+  --color-flower-leaf: var(--role-flower-leaf);
+  --color-flower-line: var(--role-flower-line);
   --color-transparent: transparent;
   --color-current: currentColor;
 

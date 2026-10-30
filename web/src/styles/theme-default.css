@@ -1,14 +1,30 @@
-/* Placeholder primitives so the contract resolves and the build is testable.
-   Wave 2's design-system-agent replaces every value below with one of three
-   real directions. The *names* are the contract; the values are not. */
+/* Default direction: "A · Plum as the ink" — shaded white surface, very dark
+   plum text, purple only as a quiet ink tone, never a bright button. Pink and
+   peach live in the powder haze and the flowers. See
+   docs/superpowers/specs/2026-10-30-scroll-story-design.md §5.
+   The *names* are the contract; the values are this direction's. */
 :root {
-  --role-surface: oklch(0.98 0.005 60);
-  --role-surface-raised: oklch(1 0 0);
-  --role-ink: oklch(0.22 0.01 60);
-  --role-ink-muted: oklch(0.52 0.01 60);
-  --role-accent: oklch(0.58 0.09 20);
-  --role-on-accent: oklch(0.99 0 0);
-  --role-hairline: oklch(0.89 0.005 60);
+  --role-surface: #faf6f3;
+  --role-surface-raised: #ffffff;
+  --role-ink: #3b2340;
+  --role-ink-muted: #6e5670;
+  --role-accent: #3b2340;
+  --role-on-accent: #faf6f3;
+  --role-hairline: #e8dde3;
+
+  /* Powder haze and soft washes. */
+  --role-powder-peach: #f2c6ad;
+  --role-powder-lilac: #a77aa8;
+  --role-blush: #e9b3c2;
+
+  /* Placeholder flower colours, from the artist's one-stroke painting style.
+     Her scanned artwork replaces the placeholders and carries its own
+     colours; these only matter until then (spec §6, §10). */
+  --role-flower-pink: #e58fb4;
+  --role-flower-blue: #7fa9db;
+  --role-flower-purple: #7b3f9e;
+  --role-flower-leaf: #c4dc5a;
+  --role-flower-line: #1f1422;
 
   --role-font-display: 'Frank Ruhl Libre', serif;
   --role-font-ui: 'Assistant', sans-serif;

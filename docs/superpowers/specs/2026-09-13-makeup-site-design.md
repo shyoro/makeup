@@ -379,7 +379,7 @@ wait.
 
 ## 12. Definition of done (every agent)
 
-Typechecks. Builds. Passes axe. Respects `prefers-reduced-motion`. Mobile
+Typechecks. Builds. Passes axe. Mobile
 renders correctly before desktop is considered. No raw hex, no font-family
 names, no magic spacing numbers in any component. No `localStorage` or
 `sessionStorage`. No raw `<img>`. No hardcoded absolute URLs.
@@ -389,7 +389,7 @@ names, no magic spacing numbers in any component. No `localStorage` or
 - RTL visual checks at all three breakpoints — screenshot and actually look.
   **Mobile first.**
 - Lighthouse: LCP and CLS. The aspect-ratio work should make CLS ≈ 0.
-- axe, keyboard focus order in RTL, `prefers-reduced-motion`.
+- axe, keyboard focus order in RTL.
 - Hebrew rendering: no Latin fallback glyphs, correct punctuation direction,
   mixed LTR runs (phone numbers, prices) not mangled.
 - Chat endpoint: rate limit fires, refuses off-knowledge questions, stays in

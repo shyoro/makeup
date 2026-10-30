@@ -138,10 +138,14 @@ layer, not inline in a component.
 
 ## Motion budget
 
-One orchestrated motion moment on the page, not per section. Everything else is
-a state transition under 200ms. `prefers-reduced-motion` is honoured globally by
-`theme-contract.css`; do not add animation that escapes it, and never animate a
-property that triggers layout.
+The scroll story runs the whole page (Shai's decision, 2026-10-30): each section
+is a scroll-driven scene, built with GSAP + ScrollTrigger, and only one scene
+animates at a time. Animate only `transform`, `opacity`, `clip-path` and SVG
+stroke offsets — never a property that triggers layout. Everything outside the
+scenes is a state transition under 200ms. Scene scripts do not branch on
+`prefers-reduced-motion`; the global CSS rule in `theme-contract.css` still
+applies to CSS animations and transitions. See
+`docs/superpowers/specs/2026-10-30-scroll-story-design.md` §7.
 
 ## Copy voice — Hebrew
 

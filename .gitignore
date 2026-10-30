@@ -22,3 +22,6 @@ skills-lock.json
 
 # Local tooling scratch
 *.db
+
+# Brainstorm mockups and plan-execution scratch
+.superpowers/
