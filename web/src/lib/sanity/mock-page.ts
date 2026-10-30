@@ -88,7 +88,8 @@ export const mockPage: Page = {
         {
           _type: 'text',
           _key: 'lasting',
-          title: 'איפור שמחזיק עד הריקוד האחרון',
+          // No-break spaces keep each half of the line together on phones.
+          title: 'איפור\u00a0שמחזיק עד הריקוד\u00a0האחרון',
           body: 'חומרים עדינים לעור, עבודת יד ותשומת לב לכל פרט, כדי שתיראי נפלא בכל תמונה, גם בסוף הערב.',
           statement: true,
         },
