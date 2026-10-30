@@ -1,0 +1,40 @@
+---
+// The one place a raw <img> is allowed (CLAUDE.md hard rule 5). The box's
+// shape comes from the locked aspect ratio in CSS, never from the asset, so
+// the slot is sized before the image loads. Video is not built yet (parent
+// spec §7); only kind: 'image' exists in MediaImage.
+import type { MediaImage } from '../../lib/sanity/types';
+import { imageSrcSet } from '../../lib/sanity/image';
+
+interface Props {
+  media: MediaImage;
+  sizes: string;
+  loading?: 'lazy' | 'eager';
+  class?: string;
+}
+
+const { media, sizes, loading = 'lazy', class: className } = Astro.props;
+const { src, srcset } = imageSrcSet(media.image, media.aspectRatio);
+
+const aspectClass = {
+  hero: 'aspect-hero',
+  portrait: 'aspect-portrait',
+  editorial: 'aspect-editorial',
+  avatar: 'aspect-avatar',
+}[media.aspectRatio];
+---
+
+<div
+  data-media
+  class:list={['relative overflow-hidden', aspectClass, className]}
+>
+  <img
+    src={src}
+    srcset={srcset}
+    sizes={sizes}
+    alt={media.alt}
+    loading={loading}
+    decoding="async"
+    class="absolute inset-0 size-full object-cover"
+  />
+</div>

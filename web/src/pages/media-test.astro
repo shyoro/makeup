@@ -1,0 +1,25 @@
+---
+// Temporary fixture for tests/scroll/media.spec.ts. Deleted in Task 4, when
+// the portfolio on / carries real <Media> instances.
+import RootLayout from '../layouts/RootLayout.astro';
+import Media from '../components/media/Media.astro';
+import type { MediaImage } from '../lib/sanity/types';
+
+const media: MediaImage = {
+  kind: 'image',
+  alt: 'כלה בזמן איפור לפני החופה',
+  aspectRatio: 'portrait',
+  image: {
+    _type: 'image',
+    asset: {
+      _ref: 'image-984f00b691b9701d451a1bd0b9e7640f780e0147-2000x3000-jpg',
+    },
+  },
+};
+---
+
+<RootLayout title="media test">
+  <main class="px-6">
+    <Media media={media} sizes="90vw" class="w-full" />
+  </main>
+</RootLayout>
