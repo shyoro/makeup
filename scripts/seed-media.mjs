@@ -1,3 +1,4 @@
+/* global process, console, fetch, Buffer */
 // One-off: upload freely licensed stock photos to Sanity as image assets, so
 // the mock page can reference them by asset ID until her real photos arrive.
 // Shai runs this; the write token stays in .env and never leaves this machine.
