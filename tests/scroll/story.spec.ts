@@ -765,7 +765,7 @@ test('the closing flowers keep clear on a small laptop too', async ({
     expect(dark).toBeLessThanOrEqual(8);
 });
 
-test('on phones a WhatsApp tile shows between the first photo and the closing', async ({
+test('on phones a WhatsApp tile shows between the pair and the closing', async ({
   page,
 }) => {
   test.skip(page.viewportSize()!.width >= 768, 'phones only');
@@ -780,7 +780,9 @@ test('on phones a WhatsApp tile shows between the first photo and the closing', 
   expect(await shown()).toBe(false);
   await placeTop(page, '[data-story-scene]', 0);
   expect(await shown()).toBe(false);
-  await placeTop(page, '[data-panel]', -0.1, 1);
+  await placeTop(page, '[data-pair] [data-slide]', 0.1, 1);
+  expect(await shown()).toBe(false);
+  await placeTop(page, '[data-pair] ~ [data-panel]', 0);
   expect(await shown()).toBe(true);
   await page.evaluate(() =>
     window.scrollTo(0, document.documentElement.scrollHeight),
@@ -794,61 +796,101 @@ test('on phones a WhatsApp tile shows between the first photo and the closing', 
   await expect(link).toHaveAttribute('aria-label', /וואטסאפ/);
 });
 
-test('on phones the tile arrives once the first photo has gone, clear of the words', async ({
+test('on phones the tile never lies over the pair, and arrives after it clear of the words', async ({
   page,
 }) => {
   test.skip(page.viewportSize()!.width >= 768, 'phones only');
   await page.goto('/');
   await page.waitForLoadState('load');
-  const panel = '[data-story-scene] ~ [data-panel]';
-  await placeTop(page, panel, 1);
-  // Scroll on in small steps until the tile shows.
-  const shown = () =>
-    page
-      .locator('[data-chat-tile]')
-      .evaluate((el) => getComputedStyle(el).visibility !== 'hidden');
-  for (let at = 1; at > -0.5 && !(await shown()); at -= 0.03) {
-    await page
-      .locator(panel)
-      .first()
-      .evaluate((el, at) => {
-        const top = el.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo(0, top - window.innerHeight * at);
-      }, at);
+  const state = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('[data-chat-tile]')!;
+      const tile = el.querySelector('a')!.getBoundingClientRect();
+      const meets = (r: DOMRect) =>
+        r.right > tile.left &&
+        r.left < tile.right &&
+        r.bottom > tile.top &&
+        r.top < tile.bottom;
+      return {
+        shown: getComputedStyle(el).visibility !== 'hidden',
+        onPhoto: [...document.querySelectorAll('[data-pair] img')].some((img) =>
+          meets(img.getBoundingClientRect()),
+        ),
+        // Lines of words on screen under it.
+        covered: [
+          ...document.querySelectorAll('[data-panel-text] :is(h2, h3, p)'),
+        ]
+          .filter((el) => window.opacityOf(el) >= 0.1)
+          .flatMap((el) => {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            return [...range.getClientRects()];
+          })
+          .filter(meets).length,
+        photo: Math.max(
+          ...[
+            ...document.querySelectorAll('[data-story-scene] [data-fade]'),
+          ].map((f) => window.opacityOf(f)),
+        ),
+      };
+    });
+  // Through the pair in small steps, until it has left the screen.
+  const over: number[] = [];
+  let arrival: Awaited<ReturnType<typeof state>> | undefined;
+  for (let at = 1; ; at -= 0.05) {
+    const bottom = await page.locator('[data-pair]').evaluate((el, at) => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, top - window.innerHeight * at);
+      return el.getBoundingClientRect().bottom / innerHeight;
+    }, at);
     await page.waitForTimeout(300);
-  }
-  expect(await shown()).toBe(true);
-  await page.waitForTimeout(800);
-  const state = await page.evaluate(() => {
-    const tile = document
-      .querySelector('[data-chat-tile] a')!
-      .getBoundingClientRect();
-    // Lines of words on screen that the tile covers.
-    let covered = 0;
-    for (const el of document.querySelectorAll(
-      '[data-panel-text] :is(h2, h3, p)',
-    )) {
-      if (window.opacityOf(el) < 0.1) continue;
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      for (const r of range.getClientRects())
-        if (
-          r.right > tile.left &&
-          r.left < tile.right &&
-          r.bottom > tile.top &&
-          r.top < tile.bottom
-        )
-          covered++;
+    const s = await state();
+    if (s.shown && s.onPhoto) over.push(Math.round(at * 100) / 100);
+    if (s.shown && !arrival) {
+      await page.waitForTimeout(800);
+      arrival = await state();
     }
-    return {
-      photo: window.opacityOf(
-        document.querySelector('[data-story-scene] [data-fade]')!,
-      ),
-      covered,
-    };
-  });
-  expect(state.photo).toBeLessThan(0.05);
-  expect(state.covered).toBe(0);
+    if (bottom < -0.1) break;
+  }
+  expect(over, 'pair positions with the tile over a photo').toEqual([]);
+  expect(arrival).toBeDefined();
+  expect(arrival!.covered).toBe(0);
+  expect(arrival!.photo).toBeLessThan(0.05);
+});
+
+test('no heading leaves a one- or two-letter word on a line of its own', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const headings = await page
+    .locator('[data-panel-text] :is(h2, h3)')
+    .evaluateAll((els) =>
+      els.map((h) => {
+        const box = h.getBoundingClientRect();
+        // Each word's place, grouped into lines by its top.
+        const lines = new Map<number, string[]>();
+        let outside = false;
+        const walker = document.createTreeWalker(h, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode())
+          for (const m of n.textContent!.matchAll(/\S+/g)) {
+            const range = document.createRange();
+            range.setStart(n, m.index);
+            range.setEnd(n, m.index + m[0].length);
+            const r = range.getBoundingClientRect();
+            if (r.left < box.left - 1 || r.right > box.right + 1)
+              outside = true;
+            const top = Math.round(r.top);
+            lines.set(top, [...(lines.get(top) ?? []), m[0]]);
+          }
+        return { lines: [...lines.values()].map((l) => l.join(' ')), outside };
+      }),
+    );
+  expect(headings.length).toBeGreaterThan(0);
+  for (const { lines, outside } of headings) {
+    expect(outside, lines.join(' / ')).toBe(false);
+    for (const line of lines)
+      expect(line, lines.join(' / ')).not.toMatch(/^\S{1,2}$/);
+  }
 });
 
 test('no WhatsApp tile on tablets and desktops', async ({ page }) => {

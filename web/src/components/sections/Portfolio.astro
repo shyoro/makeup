@@ -4,6 +4,7 @@
 // with photo pairs in between and a closing action at the end. Block order
 // comes from data; how each text section is laid out is decided here.
 import { displayPhone, telHref } from '../../lib/phone';
+import { keepShortWords } from '../../lib/text';
 import type { PortfolioSection, StoryBlock } from '../../lib/sanity/types';
 import ChatTile from './story/ChatTile.astro';
 import InkFilter from './story/InkFilter.astro';
@@ -91,7 +92,7 @@ const wrap = (centred: boolean) => (centred ? 'text-balance' : 'text-pretty');
   <InkFilter />
   <TextPanel flowers={section.flowers} {...heading}>
     <h2 class="font-display text-5xl leading-none text-balance md:text-7xl">
-      {section.title}
+      {keepShortWords(section.title)}
     </h2>
     {section.intro && <p class:list={[body, wrap(false)]}>{section.intro}</p>}
     {section.startingPrice && (
@@ -111,7 +112,7 @@ const wrap = (centred: boolean) => (centred ? 'text-balance' : 'text-pretty');
           {/* Below laptops the spray hangs over the words: they sit lower. */}
           <div data-closing class="pt-16 md:pt-32 lg:pt-0">
             <h3 class="font-display text-5xl leading-tight text-balance md:text-7xl">
-              {block.title}
+              {keepShortWords(block.title)}
             </h3>
             <p class:list={[body, wrap(true)]}>{block.body}</p>
             <a
@@ -155,7 +156,7 @@ const wrap = (centred: boolean) => (centred ? 'text-balance' : 'text-pretty');
               : 'text-5xl leading-tight md:text-7xl',
           ]}
         >
-          {block.title}
+          {keepShortWords(block.title)}
         </h3>
         <p class:list={[body, wrap(Boolean(block.statement))]}>{block.body}</p>
       </TextPanel>

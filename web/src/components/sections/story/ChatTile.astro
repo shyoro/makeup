@@ -1,9 +1,10 @@
 ---
 // On phones, a small WhatsApp tile in the bottom corner while she reads the
-// story: it appears once the first photo has gone and leaves as the closing
-// (which carries the full contact block) arrives. Never in the opening: it
-// starts hidden in CSS, so without JS it never shows. Rendered last on the
-// page, above the story layers.
+// story: it appears after the photo pair, whose photos run under its corner
+// (or, with no pair, once the first photo has gone), and leaves as the
+// closing (which carries the full contact block) arrives. Never in the
+// opening: it starts hidden in CSS, so without JS it never shows. Rendered
+// last on the page, above the story layers.
 import type { Action } from '../../../lib/sanity/types';
 import WhatsAppGlyph from './WhatsAppGlyph.astro';
 
@@ -33,10 +34,13 @@ const { action } = Astro.props;
   import { gsap, ScrollTrigger } from '../../../lib/motion/gsap';
 
   const tile = document.querySelector<HTMLElement>('[data-chat-tile]');
-  // The first words after the first photo, and the closing.
-  const after = document.querySelector(
-    '[data-story-scene] ~ [data-panel] [data-panel-text]',
-  );
+  // The first words after the photo pair, whose photos run under its
+  // corner (or, with no pair, after the first photo); and the closing.
+  const after =
+    document.querySelector('[data-pair] ~ [data-panel] [data-panel-text]') ??
+    document.querySelector(
+      '[data-story-scene] ~ [data-panel] [data-panel-text]',
+    );
   const closing = document
     .querySelector('[data-closing]')
     ?.closest('[data-panel]');
@@ -44,8 +48,8 @@ const { action } = Astro.props;
     gsap.set(tile, { y: 12 });
     ScrollTrigger.create({
       trigger: after,
-      // Once those words have risen clear of the corner, and the photo has
-      // gone.
+      // Once those words have risen clear of the corner, and the photos
+      // before them have gone.
       start: 'top 45%',
       endTrigger: closing,
       end: 'top 85%',
