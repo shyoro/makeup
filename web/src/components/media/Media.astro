@@ -1,0 +1,69 @@
+---
+// The one place a raw <img> is allowed (CLAUDE.md hard rule 5). The box's
+// shape comes from the locked aspect ratio in CSS, never from the asset, so
+// the slot is sized before the image loads. Video is not built yet (parent
+// spec §7); only kind: 'image' exists in MediaImage.
+import type { MediaImage } from '../../lib/sanity/types';
+import { imageSrcSet, type ImageFit } from '../../lib/sanity/image';
+
+interface Props {
+  media: MediaImage;
+  sizes: string;
+  loading?: 'lazy' | 'eager';
+  /** See ImageFit; default crops to the locked ratio. */
+  fit?: ImageFit;
+  widths?: number[];
+  /** Black and white. */
+  mono?: boolean;
+  class?: string;
+}
+
+const {
+  media,
+  sizes,
+  loading = 'lazy',
+  fit = 'cover',
+  widths,
+  mono = false,
+  class: className,
+} = Astro.props;
+const { src, srcset } = imageSrcSet(media.image, media.aspectRatio, {
+  widths,
+  fit,
+  mono,
+});
+
+// Where the browser crops a photo itself ('fill'), keep its focal point in
+// frame. 'cover' already crops around it at the CDN; 'contain' never crops.
+const hotspot = media.image.hotspot;
+const focus =
+  fit === 'fill' && hotspot
+    ? `object-position: ${Math.round(hotspot.x * 100)}% ${Math.round(hotspot.y * 100)}%`
+    : undefined;
+
+const aspectClass = {
+  hero: 'aspect-hero',
+  portrait: 'aspect-portrait',
+  editorial: 'aspect-editorial',
+  avatar: 'aspect-avatar',
+}[media.aspectRatio];
+---
+
+<div
+  data-media
+  class:list={['relative overflow-hidden', aspectClass, className]}
+>
+  <img
+    src={src}
+    srcset={srcset}
+    sizes={sizes}
+    alt={media.alt}
+    loading={loading}
+    decoding="async"
+    style={focus}
+    class:list={[
+      'absolute inset-0 size-full',
+      fit === 'contain' ? 'object-contain' : 'object-cover',
+    ]}
+  />
+</div>

@@ -1,0 +1,60 @@
+---
+// Two photos, one under the other, each the full width of the screen in a
+// frame with soft corners, sliding in from either side as she scrolls: the
+// first from where reading starts (the right, in Hebrew), the second from the
+// other side, each centred by the time it is mid-screen. Tall on phones, wide
+// from tablets. Transform only.
+import type { MediaImage } from '../../../lib/sanity/types';
+import Media from '../../media/Media.astro';
+
+interface Props {
+  items: [MediaImage, MediaImage];
+}
+
+const { items } = Astro.props;
+---
+
+<div
+  data-pair
+  class="relative z-10 flex flex-col gap-6 overflow-x-clip px-3 py-section md:gap-12 md:px-6"
+>
+  {items.map((item) => (
+    <div data-slide>
+      {/* fill: the browser crops around the focal point, so the frame can
+          change shape from tablets. */}
+      <Media
+        media={item}
+        fit="fill"
+        sizes="100vw"
+        class="w-full rounded-card will-change-transform md:aspect-hero"
+      />
+    </div>
+  ))}
+</div>
+
+<script>
+  import { gsap } from '../../../lib/motion/gsap';
+
+  for (const pair of document.querySelectorAll<HTMLElement>('[data-pair]')) {
+    // +1 when reading starts at the right.
+    const start = getComputedStyle(pair).direction === 'rtl' ? 1 : -1;
+    pair.querySelectorAll<HTMLElement>('[data-slide]').forEach((slot, i) => {
+      // Starting state is set here, never in markup, so no-JS shows them in
+      // place.
+      gsap.fromTo(
+        slot.firstElementChild,
+        { xPercent: (i % 2 === 0 ? start : -start) * 100 },
+        {
+          xPercent: 0,
+          ease: 'power1.out',
+          scrollTrigger: {
+            trigger: slot,
+            start: 'top bottom',
+            end: 'center center',
+            scrub: 0.5,
+          },
+        },
+      );
+    });
+  }
+</script>

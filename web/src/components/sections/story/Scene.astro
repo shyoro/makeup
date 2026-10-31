@@ -1,0 +1,117 @@
+---
+// A full-screen photo the story passes through. With JS the photo layer is
+// fixed to the screen: it fades in as the words before it dissolve, landing
+// from a zoom, then keeps pushing in slowly (a compositor scroll timeline)
+// while it holds, takes a veil of one of her colours from below as the next
+// words rise over it, and fades away. Without JS it is simply sticky.
+// Transforms and opacity only.
+import type { MediaImage } from '../../../lib/sanity/types';
+import Media from '../../media/Media.astro';
+
+interface Props {
+  media: MediaImage;
+  tone: 'blush' | 'peach';
+}
+
+const { media, tone } = Astro.props;
+---
+
+<div data-story-scene class="relative h-scene-hold">
+  <div data-layer class="sticky top-0 h-svh overflow-hidden">
+    <div data-fade class="absolute inset-0">
+      <div data-zoom class="absolute inset-0">
+        <Media
+          media={media}
+          fit="fill"
+          widths={[800, 1200, 1600, 2000]}
+          sizes="100vw"
+          class="size-full"
+        />
+      </div>
+      <div
+        data-wash
+        class:list={[
+          // Its own layer: fading a gradient in place re-rasterises it on
+          // every frame.
+          'absolute inset-0 bg-linear-to-t to-transparent opacity-0 will-change-transform',
+          tone === 'peach' ? 'from-wash-peach' : 'from-wash-blush',
+        ]}
+      ></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { gsap } from '../../../lib/motion/gsap';
+
+  for (const scene of document.querySelectorAll<HTMLElement>(
+    '[data-story-scene]',
+  )) {
+    const layer = scene.querySelector<HTMLElement>('[data-layer]');
+    const fade = scene.querySelector('[data-fade]');
+    const zoom = scene.querySelector<HTMLElement>('[data-zoom]');
+    const wash = scene.querySelector('[data-wash]');
+    if (!layer || !zoom) continue;
+
+    // Pin the photo to the screen; the track below it sets the timing.
+    layer.classList.replace('sticky', 'fixed');
+    layer.classList.add('inset-0');
+
+    const at = (start: string, end: string) => ({
+      trigger: scene,
+      start,
+      end,
+      scrub: 0.5,
+    });
+    // The zoom is a scroll-driven animation over the scene's whole pass, so
+    // it runs on the compositor (driving scale from JS repainted every
+    // frame): it lands during the fade-in, then pushes in until it leaves.
+    // Set up through the Web Animations API: the CSS build minifier rewrites
+    // animation-timeline/animation-range rules incorrectly. Browsers without
+    // view timelines show the photo without the zoom.
+    if ('ViewTimeline' in window) {
+      zoom.animate(
+        [
+          { scale: '1.3', offset: 0, easing: 'ease-out' },
+          { scale: '1', offset: 0.3 },
+          { scale: '1.12', offset: 1 },
+        ],
+        {
+          timeline: new ViewTimeline({ subject: scene, axis: 'block' }),
+          rangeStart: 'cover 0%',
+          rangeEnd: 'cover 100%',
+          fill: 'both',
+        } as KeyframeAnimationOptions,
+      );
+    }
+
+    // Separate elements for each effect, so no two tweens fight over one
+    // property: layer fades in, wash rises, fade takes it out.
+    // In as TextPanel fades the words before it out, so the two cross-fade.
+    gsap.fromTo(
+      layer,
+      { autoAlpha: 0 },
+      { autoAlpha: 1, ease: 'none', scrollTrigger: at('top 95%', 'top 55%') },
+    );
+    // A veil, not a slab: capped, so the photo still shows through.
+    gsap.fromTo(
+      wash,
+      { opacity: 0 },
+      {
+        opacity: 0.65,
+        ease: 'none',
+        scrollTrigger: at('bottom bottom', 'bottom 50%'),
+      },
+    );
+    gsap.fromTo(
+      fade,
+      { autoAlpha: 1 },
+      {
+        autoAlpha: 0,
+        ease: 'none',
+        immediateRender: false,
+        scrollTrigger: at('bottom 50%', 'bottom top'),
+      },
+    );
+  }
+</script>

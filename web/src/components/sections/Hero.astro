@@ -1,0 +1,152 @@
+---
+// Opening scene: her name on a shaded-white stage while her painting grows
+// along the spray — the ink drawing draws itself at first view, then the
+// colour washes in behind it as she scrolls. The stage is native-sticky over a tall track, and only
+// transforms and opacity animate. No call to action here (spec §2).
+import type { HeroSection, MediaImage } from '../../lib/sanity/types';
+import Media from '../media/Media.astro';
+
+interface Props {
+  section: HeroSection;
+}
+
+const { section } = Astro.props;
+
+// Decorative: alt is empty on purpose (brand-he accessibility rule).
+const layer = (image: MediaImage['image']): MediaImage => ({
+  kind: 'image',
+  alt: '',
+  aspectRatio: 'editorial',
+  image,
+});
+const layers = [
+  { name: 'line', media: layer(section.art.line) },
+  { name: 'color', media: layer(section.art.color) },
+] as const;
+---
+
+<section data-scene="hero" class="relative h-scene">
+  <div class="sticky top-0 h-svh overflow-hidden bg-surface">
+    <div data-powder aria-hidden="true">
+      <div class="absolute -start-24 bottom-1/4 size-96 bg-radial from-powder-peach to-transparent to-70% opacity-60 will-change-transform"></div>
+      <div class="absolute -end-20 bottom-0 size-80 bg-radial from-powder-lilac to-transparent to-70% opacity-25 will-change-transform"></div>
+      <div class="absolute start-1/4 top-1/4 size-72 bg-radial from-blush to-transparent to-70% opacity-40 will-change-transform"></div>
+    </div>
+
+    <div class="absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center md:justify-end md:pe-16">
+      <div
+        data-art
+        class="relative aspect-editorial w-7/4 shrink-0 will-change-transform md:w-3/4 lg:w-4/5"
+        aria-hidden="true"
+      >
+        {layers.map(({ name, media }) => (
+          <div data-wipe={name} class="absolute inset-0 overflow-hidden">
+            <div class="absolute inset-0">
+              <Media
+                media={media}
+                fit="contain"
+                loading="eager"
+                widths={[800, 1200, 1600, 2000]}
+                sizes="(min-width: 1280px) 80vw, (min-width: 768px) 75vw, 175vw"
+                class="size-full"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div
+      data-title
+      class="absolute inset-x-0 top-0 ps-6 pt-16 md:top-auto md:bottom-0 md:pb-20 md:ps-16"
+    >
+      {/* mt-4 is what tests/wave1/tokens.spec.ts's source-glob test reads off the
+          first h1 on /. Keep it on this heading. */}
+      <h1 class="font-display mt-4 text-6xl leading-none md:text-8xl">
+        {section.name}
+      </h1>
+      <p class="mt-3 text-lg text-ink-muted md:text-xl">{section.subtitle}</p>
+    </div>
+
+    {section.scrollCue && (
+      <p data-cue class="absolute bottom-6 end-6 text-sm text-ink-muted">
+        {section.scrollCue} ↓
+      </p>
+    )}
+  </div>
+</section>
+
+<script>
+  import { gsap, ScrollTrigger } from '../../lib/motion/gsap';
+  import { createSweep } from '../../lib/motion/sweep';
+
+  // How long the ink drawing takes to draw itself at first view, in seconds.
+  const DRAW_IN = 1.8;
+
+  function whenLoaded(img: HTMLImageElement | null, timeout: number) {
+    return new Promise<void>((resolve) => {
+      if (!img || img.complete) return resolve();
+      img.addEventListener('load', () => resolve(), { once: true });
+      img.addEventListener('error', () => resolve(), { once: true });
+      setTimeout(resolve, timeout);
+    });
+  }
+
+  for (const scene of document.querySelectorAll<HTMLElement>(
+    '[data-scene="hero"]',
+  )) {
+    const box = scene.querySelector<HTMLElement>('[data-art]');
+    const words = scene.querySelectorAll('[data-title], [data-cue]');
+    const powder = scene.querySelectorAll('[data-powder] > *');
+    if (!box) continue;
+
+    const layer = (name: string) =>
+      box.querySelector<HTMLElement>(`[data-wipe="${name}"]`)!;
+    // The drawing plays on its own, with a soft edge; the colour follows
+    // scroll only, with a crisp one (see sweep.ts on soft edges and scroll).
+    const line = createSweep(box, layer('line'), { edge: 'mask' });
+    const color = createSweep(box, layer('color'));
+    const state = { line: 0, color: 0 };
+    const render = () => {
+      line.render(state.line);
+      color.render(state.color);
+    };
+    const layout = () => {
+      line.layout();
+      color.layout();
+      render();
+    };
+    layout();
+    ScrollTrigger.addEventListener('refresh', layout);
+
+    const tl = gsap.timeline({
+      defaults: { ease: 'none' },
+      scrollTrigger: {
+        trigger: scene,
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 0.5,
+        onRefresh: (self) => {
+          scene.dataset.end = String(Math.round(self.end));
+        },
+      },
+    });
+    // Colour first, then the name and cue lift away, then the art fades out
+    // as the story's first words rise over it: no stretch where nothing
+    // moves, and no other flowers over her painting.
+    tl.to(state, { color: 1, duration: 0.6, onUpdate: render }, 0)
+      // No zoom on the art: scaling it re-rasterised both layers every frame.
+      .to(powder, { yPercent: -18, duration: 1 }, 0)
+      .to(words, { opacity: 0, y: -32, duration: 0.2 }, 0.5)
+      .to(box, { opacity: 0, duration: 0.25 }, 0.75);
+
+    whenLoaded(box.querySelector('[data-wipe="line"] img'), 1200).then(() => {
+      gsap.to(state, {
+        line: 1,
+        duration: DRAW_IN,
+        ease: 'power1.inOut',
+        onUpdate: render,
+      });
+    });
+  }
+</script>

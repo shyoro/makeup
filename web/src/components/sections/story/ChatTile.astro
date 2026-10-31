@@ -1,0 +1,68 @@
+---
+// On phones, a small WhatsApp tile in the bottom corner while she reads the
+// story: it appears after the photo pair, whose photos run under its corner
+// (or, with no pair, once the first photo has gone), and leaves as the
+// closing (which carries the full contact block) arrives. Never in the
+// opening: it starts hidden in CSS, so without JS it never shows. Rendered
+// last on the page, above the story layers.
+import type { Action } from '../../../lib/sanity/types';
+import WhatsAppGlyph from './WhatsAppGlyph.astro';
+
+interface Props {
+  action: Action;
+}
+
+const { action } = Astro.props;
+---
+
+<div
+  data-chat-tile
+  class="invisible fixed end-4 bottom-4 z-20 opacity-0 md:hidden"
+>
+  <a
+    href={action.href}
+    target="_blank"
+    rel="noopener"
+    aria-label={action.label}
+    class="flex size-14 items-center justify-center rounded-card bg-accent text-on-accent ring-1 ring-surface/40"
+  >
+    <WhatsAppGlyph class="size-7" />
+  </a>
+</div>
+
+<script>
+  import { gsap, ScrollTrigger } from '../../../lib/motion/gsap';
+
+  const tile = document.querySelector<HTMLElement>('[data-chat-tile]');
+  // The first words after the photo pair, whose photos run under its
+  // corner (or, with no pair, after the first photo); and the closing.
+  const after =
+    document.querySelector('[data-pair] ~ [data-panel] [data-panel-text]') ??
+    document.querySelector(
+      '[data-story-scene] ~ [data-panel] [data-panel-text]',
+    );
+  const closing = document
+    .querySelector('[data-closing]')
+    ?.closest('[data-panel]');
+  if (tile && after && closing) {
+    gsap.set(tile, { y: 12 });
+    ScrollTrigger.create({
+      trigger: after,
+      // Once those words have risen clear of the corner, and the photos
+      // before them have gone.
+      start: 'top 45%',
+      endTrigger: closing,
+      end: 'top 85%',
+      // A short toggle, not scrubbed: it is a control, not part of the story.
+      onToggle: ({ isActive }) => {
+        gsap.to(tile, {
+          autoAlpha: isActive ? 1 : 0,
+          y: isActive ? 0 : 12,
+          duration: 0.25,
+          ease: 'power1.out',
+          overwrite: true,
+        });
+      },
+    });
+  }
+</script>

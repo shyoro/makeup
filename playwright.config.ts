@@ -21,7 +21,15 @@ export default defineConfig({
     // "Process from config.webServer exited early." ASTRO_PREVIEW_BACKGROUND
     // opts out of that auto-detection so the server stays in the foreground
     // process Playwright spawned and is watching.
-    env: { ASTRO_PREVIEW_BACKGROUND: '1' },
+    //
+    // PUBLIC_CONTACT_*: her real number lives only in .env (spec 3.1: the
+    // repo must not make it scrapable). Tests build with this obviously fake
+    // one instead; a variable set here beats the .env file.
+    env: {
+      ASTRO_PREVIEW_BACKGROUND: '1',
+      PUBLIC_CONTACT_PHONE: '+972-50-000-0000',
+      PUBLIC_CONTACT_WHATSAPP: 'https://wa.me/972500000000',
+    },
   },
   use: { baseURL: 'http://localhost:4321' },
   projects: [

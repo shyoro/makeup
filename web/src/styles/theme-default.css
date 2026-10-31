@@ -1,18 +1,46 @@
-/* Placeholder primitives so the contract resolves and the build is testable.
-   Wave 2's design-system-agent replaces every value below with one of three
-   real directions. The *names* are the contract; the values are not. */
+/* Default direction: "A · Plum as the ink" — shaded white surface, very dark
+   plum text, purple only as a quiet ink tone, never a bright button. Pink and
+   peach live in the powder haze and the portfolio's background tones. See
+   docs/superpowers/specs/2026-10-30-scroll-story-design.md §5.
+   The *names* are the contract; the values are this direction's. */
 :root {
-  --role-surface: oklch(0.98 0.005 60);
-  --role-surface-raised: oklch(1 0 0);
-  --role-ink: oklch(0.22 0.01 60);
-  --role-ink-muted: oklch(0.52 0.01 60);
-  --role-accent: oklch(0.58 0.09 20);
-  --role-on-accent: oklch(0.99 0 0);
-  --role-hairline: oklch(0.89 0.005 60);
+  --role-surface: #faf6f3;
+  --role-surface-raised: #ffffff;
+  --role-ink: #3b2340;
+  --role-ink-muted: #6e5670;
+  --role-accent: #3b2340;
+  --role-on-accent: #faf6f3;
+  --role-hairline: #e8dde3;
+
+  /* Powder haze and soft washes. */
+  --role-powder-peach: #f2c6ad;
+  --role-powder-lilac: #a77aa8;
+  --role-blush: #e9b3c2;
+  /* The colour a photo washes into as words scroll over it: the tone, a
+     quarter of the way to the surface, so it lifts the photo, not muddies it. */
+  --role-wash-blush: color-mix(
+    in oklab,
+    var(--role-blush) 75%,
+    var(--role-surface)
+  );
+  --role-wash-peach: color-mix(
+    in oklab,
+    var(--role-powder-peach) 75%,
+    var(--role-surface)
+  );
 
   --role-font-display: 'Frank Ruhl Libre', serif;
   --role-font-ui: 'Assistant', sans-serif;
 
-  --role-radius-card: 0.5rem;
+  --role-radius-card: 0.3125rem; /* ~5px: gentle, fixed photo corners */
   --role-space-section: 4rem;
+  /* Scroll length of a sticky scene: how long the opening plays. */
+  --role-scene-track: 200svh;
+  /* How far the story rises over the end of the opening, so its first words
+     arrive as the painting dims instead of after it has gone. */
+  --role-scene-overlap: 75svh;
+  /* Scroll length of a full-screen photo scene: fade in, hold, wash out.
+     Short: a photo that holds the screen alone for long reads as the end of
+     the page. */
+  --role-scene-hold: 50svh;
 }
