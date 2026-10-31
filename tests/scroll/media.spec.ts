@@ -21,5 +21,7 @@ test('media box is locked to its aspect', async ({ page }) => {
     .first()
     .boundingBox();
   expect(box).not.toBeNull();
-  expect(Math.abs(box!.width / box!.height - 0.8)).toBeLessThan(0.01);
+  // The pair's photos: 4:5 on phones, 16:9 from tablets.
+  const ratio = page.viewportSize()!.width < 768 ? 4 / 5 : 16 / 9;
+  expect(Math.abs(box!.width / box!.height - ratio)).toBeLessThan(0.01);
 });

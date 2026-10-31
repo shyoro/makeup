@@ -114,7 +114,12 @@ test('every screen of the story shows a photo or words', async ({ page }) => {
       // photo and the words together make up most of one.
       const inView = (el: Element) => {
         const r = el.getBoundingClientRect();
-        return r.bottom > innerHeight * 0.2 && r.top < innerHeight * 0.8;
+        return (
+          r.bottom > innerHeight * 0.2 &&
+          r.top < innerHeight * 0.8 &&
+          r.right > innerWidth * 0.2 &&
+          r.left < innerWidth * 0.8
+        );
       };
       const most = (els: Element[]) =>
         Math.max(0, ...els.map((el) => window.opacityOf(el)));
@@ -124,7 +129,7 @@ test('every screen of the story shows a photo or words', async ({ page }) => {
       const content = most(
         [
           ...document.querySelectorAll(
-            '[data-panel-text], [data-reveal], [data-scene="hero"] [data-art]',
+            '[data-panel-text], [data-slide] [data-media], [data-scene="hero"] [data-art]',
           ),
         ].filter(inView),
       );
@@ -416,18 +421,71 @@ test('the last flowers draw themselves as the story ends', async ({ page }) => {
   expect(uncovered).toBeGreaterThan(0.8);
 });
 
-test('pair photos reveal on scroll inside 5px frames', async ({ page }) => {
+/** How far each pair photo sits from its place, in widths; + is right. */
+function pairOffsets(page: Page) {
+  return page.locator('[data-pair] [data-slide]').evaluateAll((slots) =>
+    slots.map((slot) => {
+      const place = slot.getBoundingClientRect();
+      const photo = slot.querySelector('[data-media]')!.getBoundingClientRect();
+      return (photo.left - place.left) / place.width;
+    }),
+  );
+}
+
+test('pair photos slide in with scroll, the first from the right and the second from the left', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.waitForLoadState('load');
-  const opacity = () =>
-    page
-      .locator('[data-pair] [data-reveal]')
-      .first()
-      .evaluate((el) => Number(getComputedStyle(el).opacity));
-  expect(await opacity()).toBeLessThan(0.05);
-  await placeTop(page, '[data-pair]', 0.1);
-  expect(await opacity()).toBeGreaterThan(0.99);
+  const slots = '[data-pair] [data-slide]';
+  for (const [i, side] of [
+    [0, 1],
+    [1, -1],
+  ] as const) {
+    await placeTop(page, slots, 0.95, i);
+    const entering = (await pairOffsets(page))[i]! * side;
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await placeTop(page, slots, 0.6, i);
+    const partway = (await pairOffsets(page))[i]! * side;
+    // Centred on screen.
+    await page
+      .locator(slots)
+      .nth(i)
+      .evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        window.scrollTo(
+          0,
+          r.top + window.scrollY + r.height / 2 - innerHeight / 2,
+        );
+      });
+    await page.waitForTimeout(1200);
+    const centred = (await pairOffsets(page))[i]!;
+    expect(entering).toBeGreaterThan(0.5);
+    expect(partway).toBeGreaterThan(0.02);
+    expect(partway).toBeLessThan(entering);
+    expect(Math.abs(centred)).toBeLessThan(0.01);
+  }
+});
 
+test('pair photos run the full width, one under the other, in 5px frames', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const rects = await page
+    .locator('[data-pair] [data-slide]')
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return { width: r.width, gutters: innerWidth - r.width, ...r.toJSON() };
+      }),
+    );
+  expect(rects).toHaveLength(2);
+  for (const r of rects) expect(r.gutters).toBeLessThanOrEqual(48);
+  expect(rects[1]!.top).toBeGreaterThan(rects[0]!.bottom);
   const radii = await page
     .locator('[data-pair] [data-media]')
     .evaluateAll((els) =>
@@ -439,53 +497,16 @@ test('pair photos reveal on scroll inside 5px frames', async ({ page }) => {
   for (const r of radii) expect(r).toEqual(['5px', '5px']);
 });
 
-test('on phones the pair photos stack, large', async ({ page }) => {
-  test.skip(page.viewportSize()!.width >= 768, 'phones only');
-  await page.goto('/');
-  const rects = await page
-    .locator('[data-pair] [data-reveal]')
-    .evaluateAll((els) =>
-      els.map((el) => {
-        const r = el.getBoundingClientRect();
-        return {
-          width: r.width / innerWidth,
-          left: r.left / innerWidth,
-          top: r.top,
-          bottom: r.bottom,
-        };
-      }),
-    );
-  expect(rects).toHaveLength(2);
-  for (const r of rects) expect(r.width).toBeGreaterThan(0.78);
-  expect(rects[1]!.top).toBeGreaterThan(rects[0]!.bottom);
-  // Offset clearly to either side, not by an accidental few pixels.
-  expect(Math.abs(rects[0]!.left - rects[1]!.left) * 390).toBeGreaterThan(45);
-});
-
-test('pair photos settle from a zoom inside their frames', async ({ page }) => {
-  await page.goto('/');
-  await page.waitForLoadState('load');
-  const scale = () =>
-    page
-      .locator('[data-pair] [data-reveal] img')
-      .first()
-      .evaluate((img) => {
-        const s = getComputedStyle(img).scale;
-        return s === 'none' ? 1 : parseFloat(s);
-      });
-  await placeTop(page, '[data-pair] [data-reveal]', 0.9);
-  expect(await scale()).toBeGreaterThan(1.05);
-  await placeTop(page, '[data-pair] [data-reveal]', 0.2);
-  expect(await scale()).toBeLessThan(1.01);
-});
-
-test('pair slots keep 4:5 before images load', async ({ page }) => {
+test('pair slots keep their shape before images load: 4:5 on phones, 16:9 wider', async ({
+  page,
+}) => {
   await page.route('**/cdn.sanity.io/**', () => {
     // never respond: images stay pending
   });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const ratio = page.viewportSize()!.width < 768 ? 4 / 5 : 16 / 9;
   const ratios = await page
-    .locator('[data-pair] [data-reveal]')
+    .locator('[data-pair] [data-media]')
     .evaluateAll((els) =>
       els.map((el) => {
         const r = el.getBoundingClientRect();
@@ -493,7 +514,41 @@ test('pair slots keep 4:5 before images load', async ({ page }) => {
       }),
     );
   expect(ratios.length).toBeGreaterThan(0);
-  for (const r of ratios) expect(Math.abs(r - 0.8)).toBeLessThan(0.01);
+  for (const r of ratios) expect(Math.abs(r - ratio)).toBeLessThan(0.01);
+});
+
+test('a full-screen photo holds the screen on its own for under a screen of scroll', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  // In tenths of a screen: how long the photo is on screen, and how long with
+  // no words over or around it, while nothing but the photo is to be seen.
+  let shown = 0;
+  let alone = 0;
+  for (let at = 1; at > -1.05; at -= 0.1) {
+    await page
+      .locator('[data-story-scene]')
+      .first()
+      .evaluate((el, at) => {
+        const top = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo(0, top - window.innerHeight * at);
+      }, at);
+    await page.waitForTimeout(650);
+    const s = await page.evaluate(() => ({
+      photo: window.opacityOf(
+        document.querySelector('[data-story-scene] [data-fade]')!,
+      ),
+      words: [...document.querySelectorAll('[data-panel-text]')].some((t) => {
+        const r = t.getBoundingClientRect();
+        return window.opacityOf(t) > 0.3 && r.bottom > 0 && r.top < innerHeight;
+      }),
+    }));
+    if (s.photo > 0.5) shown++;
+    if (s.photo > 0.5 && !s.words) alone++;
+  }
+  expect(alone / 10).toBeLessThan(1);
+  expect(shown / 10).toBeLessThanOrEqual(1.2);
 });
 
 test('text sections vary in placement and scale', async ({ page }) => {
@@ -826,12 +881,12 @@ test('the story reads top to bottom with JavaScript disabled', async ({
   await expect(page.locator('[data-chat-tile]')).toBeHidden();
   await expect(page.locator('[data-closing] > a')).toBeVisible();
   await expect(page.locator('[data-closing] [data-phone]')).toBeVisible();
-  const reveals = await page
-    .locator('[data-reveal]')
-    .evaluateAll((els) =>
-      els.map((el) => Number(getComputedStyle(el).opacity)),
-    );
-  for (const o of reveals) expect(o).toBe(1);
+  // The pair's photos in place.
+  const photos = await page
+    .locator('[data-pair] [data-media]')
+    .evaluateAll((els) => els.map((el) => getComputedStyle(el).transform));
+  expect(photos.length).toBeGreaterThan(0);
+  for (const t of photos) expect(t).toBe('none');
   await context.close();
 });
 

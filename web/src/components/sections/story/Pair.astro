@@ -1,7 +1,9 @@
 ---
-// Two photos, each rising gently into view and settling from a zoom inside a
-// fixed frame with soft corners: on phones stacked large and offset to either
-// side, from tablets side by side. Opacity and transform only.
+// Two photos, one under the other, each the full width of the screen in a
+// frame with soft corners, sliding in from either side as she scrolls: the
+// first from where reading starts (the right, in Hebrew), the second from the
+// other side, each centred by the time it is mid-screen. Tall on phones, wide
+// from tablets. Transform only.
 import type { MediaImage } from '../../../lib/sanity/types';
 import Media from '../../media/Media.astro';
 
@@ -14,20 +16,17 @@ const { items } = Astro.props;
 
 <div
   data-pair
-  class="relative z-10 grid grid-cols-1 items-start gap-6 px-3 py-section md:grid-cols-2 md:gap-12 md:px-16"
+  class="relative z-10 flex flex-col gap-6 overflow-x-clip px-3 py-section md:gap-12 md:px-6"
 >
-  {items.map((item, i) => (
-    <div
-      data-reveal
-      class:list={[
-        'w-6/7 md:w-full',
-        i === 1 ? 'justify-self-end md:mt-32' : 'justify-self-start',
-      ]}
-    >
+  {items.map((item) => (
+    <div data-slide>
+      {/* fill: the browser crops around the focal point, so the frame can
+          change shape from tablets. */}
       <Media
         media={item}
-        sizes="(min-width: 768px) 45vw, 85vw"
-        class="w-full rounded-card"
+        fit="fill"
+        sizes="100vw"
+        class="w-full rounded-card will-change-transform md:aspect-hero"
       />
     </div>
   ))}
@@ -36,34 +35,26 @@ const { items } = Astro.props;
 <script>
   import { gsap } from '../../../lib/motion/gsap';
 
-  for (const wrap of document.querySelectorAll<HTMLElement>(
-    '[data-pair] [data-reveal]',
-  )) {
-    // The photo settles inside its frame as it enters: a compositor scroll
-    // timeline, like the scenes' zoom (see Scene.astro for why it is set up
-    // in script).
-    const img = wrap.querySelector('img');
-    if (img && 'ViewTimeline' in window)
-      img.animate({ scale: ['1.15', '1'] }, {
-        timeline: new ViewTimeline({ subject: wrap, axis: 'block' }),
-        rangeStart: 'entry 0%',
-        rangeEnd: 'entry 80%',
-        fill: 'both',
-      } as KeyframeAnimationOptions);
-
-    // Starting state is set here, never in markup, so no-JS shows them.
-    gsap.set(wrap, { opacity: 0, y: 56 });
-    gsap.to(wrap, {
-      opacity: 1,
-      y: 0,
-      ease: 'power1.out',
-      scrollTrigger: {
-        trigger: wrap,
-        start: 'top 95%',
-        // clamp() keeps the end reachable for photos near the page bottom.
-        end: 'clamp(top 60%)',
-        scrub: 0.5,
-      },
+  for (const pair of document.querySelectorAll<HTMLElement>('[data-pair]')) {
+    // +1 when reading starts at the right.
+    const start = getComputedStyle(pair).direction === 'rtl' ? 1 : -1;
+    pair.querySelectorAll<HTMLElement>('[data-slide]').forEach((slot, i) => {
+      // Starting state is set here, never in markup, so no-JS shows them in
+      // place.
+      gsap.fromTo(
+        slot.firstElementChild,
+        { xPercent: (i % 2 === 0 ? start : -start) * 100 },
+        {
+          xPercent: 0,
+          ease: 'power1.out',
+          scrollTrigger: {
+            trigger: slot,
+            start: 'top bottom',
+            end: 'center center',
+            scrub: 0.5,
+          },
+        },
+      );
     });
   }
 </script>
