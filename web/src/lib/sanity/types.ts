@@ -73,6 +73,8 @@ export interface StoryClosing {
   title: string;
   body: string;
   action: Action;
+  /** Her number, shown under the action; from siteSettings (parent spec §5). */
+  phone?: string;
 }
 
 export type StoryBlock = StoryScene | StoryText | StoryPair | StoryClosing;

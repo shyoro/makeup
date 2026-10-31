@@ -3,6 +3,7 @@
 // take turns, so the page moves between pictures and words as she scrolls,
 // with photo pairs in between and a closing action at the end. Block order
 // comes from data; how each text section is laid out is decided here.
+import { displayPhone, telHref } from '../../lib/phone';
 import type { PortfolioSection, StoryBlock } from '../../lib/sanity/types';
 import InkFilter from './story/InkFilter.astro';
 import Pair from './story/Pair.astro';
@@ -107,6 +108,18 @@ const body = 'mt-4 text-lg leading-relaxed text-pretty text-ink md:text-xl';
             >
               {block.action.label}
             </a>
+            {block.phone && (
+              <p class="mt-4 text-lg text-ink-muted">
+                <a
+                  data-phone
+                  dir="ltr"
+                  href={telHref(block.phone)}
+                  class="underline-offset-4 hover:underline"
+                >
+                  {displayPhone(block.phone)}
+                </a>
+              </p>
+            )}
           </div>
         </TextPanel>
       );

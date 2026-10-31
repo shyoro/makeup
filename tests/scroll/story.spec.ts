@@ -561,14 +561,25 @@ test('the story ends on a clear way to book', async ({ page }) => {
       const blocks = [...section.children].filter(
         (el) => el.tagName !== 'SCRIPT',
       );
-      return blocks.at(-1)!.querySelectorAll('[data-closing] a').length;
+      return blocks.at(-1)!.querySelectorAll('[data-closing] > a').length;
     });
   expect(last).toBe(1);
-  const action = page.locator('[data-closing] a');
+  const action = page.locator('[data-closing] > a');
   expect(await action.getAttribute('href')).toBeTruthy();
   const box = (await action.boundingBox())!;
   expect(box.height).toBeGreaterThanOrEqual(56);
   expect(box.width).toBeGreaterThanOrEqual(240);
+});
+
+test('the closing calls her, with her number shown', async ({ page }) => {
+  // Built with playwright.config.ts's fake number.
+  await page.goto('/');
+  const TEL = 'tel:+972500000000';
+  await expect(page.locator('[data-closing] > a')).toHaveAttribute('href', TEL);
+  const phone = page.locator('[data-closing] [data-phone]');
+  await expect(phone).toHaveText('050-000-0000');
+  await expect(phone).toHaveAttribute('href', TEL);
+  await expect(phone).toHaveAttribute('dir', 'ltr');
 });
 
 test('the story reads top to bottom with JavaScript disabled', async ({

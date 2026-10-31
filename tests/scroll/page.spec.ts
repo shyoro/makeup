@@ -15,7 +15,12 @@ test('hero heading is the first h1 and is the artist name', async ({
   page,
 }) => {
   await page.goto('/');
-  await expect(page.locator('h1').first()).toHaveText('נועה לוי');
+  await expect(page.locator('h1').first()).toHaveText('שירי מועלם');
+});
+
+test('the page title carries her name', async ({ page }) => {
+  await page.goto('/');
+  expect(await page.title()).toMatch(/^שירי מועלם · /);
 });
 
 test('no call to action in the opening', async ({ page }) => {

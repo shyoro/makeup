@@ -5,10 +5,15 @@
 import RootLayout from '../layouts/RootLayout.astro';
 import SectionRenderer from '../components/sections/SectionRenderer.astro';
 import { mockPage } from '../lib/sanity/mock-page';
+import type { HeroSection } from '../lib/sanity/types';
+
+const hero = mockPage.sections.find(
+  (s): s is HeroSection => s._type === 'hero',
+);
 ---
 
 <RootLayout
-  title="נועה לוי · איפור כלות"
+  title={hero ? `${hero.name} · איפור כלות` : 'איפור כלות'}
   description="איפור כלות וערב בעבודת יד, מהפגישה הראשונה ועד הריקוד האחרון."
 >
   <main>

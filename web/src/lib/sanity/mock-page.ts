@@ -1,6 +1,13 @@
 // Mock content, replaced later by a typed GROQ query returning the same Page
 // shape. Images are real Sanity assets uploaded by scripts/seed-media.mjs.
+import { telHref } from '../phone';
 import type { MediaImage, Page, PaintedArt } from './types';
+
+// Her number never enters the repo (parent spec §3.1): it comes from .env for
+// now, from Sanity's siteSettings later. Without it the closing action falls
+// back to the booking placeholder.
+const phone: string | undefined =
+  import.meta.env.PUBLIC_CONTACT_PHONE || undefined;
 
 /** `focus` is the photo's focal point as fractions of its width and height,
  *  as Sanity's hotspot will give it. */
@@ -40,7 +47,7 @@ export const mockPage: Page = {
     {
       _type: 'hero',
       _key: 'hero',
-      name: 'נועה לוי',
+      name: 'שירי מועלם',
       subtitle: 'איפור כלות וערב',
       scrollCue: 'גללי',
       art,
@@ -107,9 +114,13 @@ export const mockPage: Page = {
           _key: 'closing',
           title: 'נשמח להיות חלק מהיום שלך',
           body: 'חתונה, חינה או ערב מיוחד: ספרי לי על התאריך ועל השמלה, ונבנה יחד את המראה שלך.',
-          // Mock: the booking section (Cal.com, parent spec §3) is not built
-          // yet; the real link comes from Sanity.
-          action: { label: 'לבדיקת תאריך פנוי', href: '#booking' },
+          // Until the booking section (Cal.com, parent spec §3) is built, the
+          // action calls her.
+          action: {
+            label: 'לבדיקת תאריך פנוי',
+            href: phone ? telHref(phone) : '#booking',
+          },
+          phone,
         },
       ],
     },
