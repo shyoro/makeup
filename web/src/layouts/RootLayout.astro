@@ -15,6 +15,9 @@ const { title, description } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Her number is an explicit tel: link; this keeps iOS from turning
+        other figures, such as the price, into phone links. */}
+    <meta name="format-detection" content="telephone=no" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     {/* On the temporary workers.dev origin. seo-agent owns the full head in

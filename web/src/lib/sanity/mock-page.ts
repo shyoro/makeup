@@ -1,13 +1,27 @@
 // Mock content, replaced later by a typed GROQ query returning the same Page
 // shape. Images are real Sanity assets uploaded by scripts/seed-media.mjs.
 import { telHref } from '../phone';
-import type { MediaImage, Page, PaintedArt } from './types';
+import type { Action, MediaImage, Page, PaintedArt } from './types';
 
-// Her number never enters the repo (parent spec §3.1): it comes from .env for
-// now, from Sanity's siteSettings later. Without it the closing action falls
-// back to the booking placeholder.
+// Her number and WhatsApp link never enter the repo (parent spec §3.1): they
+// come from .env for now, from Sanity's siteSettings later. The closing's
+// action is a WhatsApp chat when she has one, else a call, else the booking
+// placeholder.
 const phone: string | undefined =
   import.meta.env.PUBLIC_CONTACT_PHONE || undefined;
+const whatsapp: string | undefined =
+  import.meta.env.PUBLIC_CONTACT_WHATSAPP || undefined;
+const firstMessage = 'היי שירי, אשמח לבדוק אם התאריך שלי פנוי';
+const contact: Action = whatsapp
+  ? {
+      label: 'לבדיקת תאריך בוואטסאפ',
+      href: `${whatsapp}?text=${encodeURIComponent(firstMessage)}`,
+      kind: 'whatsapp',
+    }
+  : {
+      label: 'לבדיקת תאריך פנוי',
+      href: phone ? telHref(phone) : '#booking',
+    };
 
 /** `focus` is the photo's focal point as fractions of its width and height,
  *  as Sanity's hotspot will give it. */
@@ -114,12 +128,8 @@ export const mockPage: Page = {
           _key: 'closing',
           title: 'נשמח להיות חלק מהיום שלך',
           body: 'חתונה, חינה או ערב מיוחד: ספרי לי על התאריך ועל השמלה, ונבנה יחד את המראה שלך.',
-          // Until the booking section (Cal.com, parent spec §3) is built, the
-          // action calls her.
-          action: {
-            label: 'לבדיקת תאריך פנוי',
-            href: phone ? telHref(phone) : '#booking',
-          },
+          // Until the booking section (Cal.com, parent spec §3) is built.
+          action: contact,
           phone,
         },
       ],

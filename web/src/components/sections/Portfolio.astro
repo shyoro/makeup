@@ -5,10 +5,12 @@
 // comes from data; how each text section is laid out is decided here.
 import { displayPhone, telHref } from '../../lib/phone';
 import type { PortfolioSection, StoryBlock } from '../../lib/sanity/types';
+import ChatTile from './story/ChatTile.astro';
 import InkFilter from './story/InkFilter.astro';
 import Pair from './story/Pair.astro';
 import Scene from './story/Scene.astro';
 import TextPanel from './story/TextPanel.astro';
+import WhatsAppGlyph from './story/WhatsAppGlyph.astro';
 
 interface Props {
   section: PortfolioSection;
@@ -26,15 +28,16 @@ const alternate = <T,>(pair: readonly [T, T], i: number): T =>
 // the other (statement lines and the closing are centred), flowers in the
 // opposite corner, turned 90° then 180°. After a photo (or her painting, for
 // the heading) the flowers grow from the bottom, so they never lie over the
-// picture as it leaves; otherwise from the top.
+// picture as it leaves; otherwise, and for the closing (whose flowers draw
+// themselves once the picture has gone), from the top, clear of its actions.
 let texts = 0;
 let sides = 0;
-function textLayout(centred: boolean, afterPicture: boolean) {
+function textLayout(centred: boolean, afterPicture: boolean, drawsIn = false) {
   const t = texts++;
   const align: Align = centred
     ? 'center'
     : alternate(['start', 'end'] as const, sides++);
-  const block = afterPicture ? 'bottom' : 'top';
+  const block = afterPicture && !drawsIn ? 'bottom' : 'top';
   const inline =
     align === 'center'
       ? alternate(['start', 'end'] as const, t)
@@ -68,11 +71,19 @@ const story = section.blocks.map((block: StoryBlock, i) => {
         layout: textLayout(Boolean(block.statement), afterPicture),
       };
     case 'closing':
-      return { ...block, layout: textLayout(true, afterPicture) };
+      return { ...block, layout: textLayout(true, afterPicture, true) };
   }
 });
 
-const body = 'mt-4 text-lg leading-relaxed text-pretty text-ink md:text-xl';
+// The closing's WhatsApp chat also rides along on phones (ChatTile.astro).
+const closing = section.blocks.find(
+  (b): b is Extract<StoryBlock, { _type: 'closing' }> => b._type === 'closing',
+);
+
+const body = 'mt-4 text-lg leading-relaxed text-ink md:text-xl';
+// Centred words read best in even lines, which also keeps them clear of the
+// flowers at either side.
+const wrap = (centred: boolean) => (centred ? 'text-balance' : 'text-pretty');
 ---
 
 {/* Rises over the opening's last stretch: see --role-scene-overlap. */}
@@ -82,7 +93,7 @@ const body = 'mt-4 text-lg leading-relaxed text-pretty text-ink md:text-xl';
     <h2 class="font-display text-5xl leading-none text-balance md:text-7xl">
       {section.title}
     </h2>
-    {section.intro && <p class={body}>{section.intro}</p>}
+    {section.intro && <p class:list={[body, wrap(false)]}>{section.intro}</p>}
     {section.startingPrice && (
       <p class="mt-4 text-lg text-pretty text-ink md:text-xl">
         איפור כלה החל מ־<span dir="ltr">{section.startingPrice} ₪</span>
@@ -97,28 +108,39 @@ const body = 'mt-4 text-lg leading-relaxed text-pretty text-ink md:text-xl';
     if (block._type === 'closing')
       return (
         <TextPanel flowers={section.flowers} {...block.layout} drawIn>
-          <div data-closing>
+          {/* Below laptops the spray hangs over the words: they sit lower. */}
+          <div data-closing class="pt-16 md:pt-32 lg:pt-0">
             <h3 class="font-display text-5xl leading-tight text-balance md:text-7xl">
               {block.title}
             </h3>
-            <p class={body}>{block.body}</p>
+            <p class:list={[body, wrap(true)]}>{block.body}</p>
             <a
               href={block.action.href}
-              class="mt-8 inline-flex min-h-14 min-w-60 items-center justify-center rounded-card bg-accent px-8 text-lg text-on-accent transition-opacity hover:opacity-90"
+              {...(block.action.kind === 'whatsapp' && {
+                target: '_blank',
+                rel: 'noopener',
+              })}
+              class="mt-8 inline-flex min-h-14 w-full max-w-xs items-center justify-center gap-3 rounded-card bg-accent px-6 text-lg text-on-accent transition-opacity hover:opacity-90 md:mt-10 md:w-auto md:min-w-72"
             >
+              {block.action.kind === 'whatsapp' && (
+                <WhatsAppGlyph class="size-6 shrink-0" />
+              )}
               {block.action.label}
             </a>
             {block.phone && (
-              <p class="mt-4 text-lg text-ink-muted">
+              <div class="mt-6">
+                <p class="text-sm text-ink-muted md:text-base">
+                  או התקשרי אליי
+                </p>
+                {/* bdi keeps the digits and dashes in order inside RTL. */}
                 <a
                   data-phone
-                  dir="ltr"
                   href={telHref(block.phone)}
-                  class="underline-offset-4 hover:underline"
+                  class="inline-block py-2 font-display text-4xl tracking-wide tabular-nums underline decoration-ink-muted decoration-1 underline-offset-8 md:text-5xl"
                 >
-                  {displayPhone(block.phone)}
+                  <bdi dir="ltr">{displayPhone(block.phone)}</bdi>
                 </a>
-              </p>
+              </div>
             )}
           </div>
         </TextPanel>
@@ -135,8 +157,9 @@ const body = 'mt-4 text-lg leading-relaxed text-pretty text-ink md:text-xl';
         >
           {block.title}
         </h3>
-        <p class={body}>{block.body}</p>
+        <p class:list={[body, wrap(Boolean(block.statement))]}>{block.body}</p>
       </TextPanel>
     );
   })}
+  {closing?.action.kind === 'whatsapp' && <ChatTile action={closing.action} />}
 </section>

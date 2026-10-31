@@ -522,15 +522,24 @@ test('headings wrap balanced and body text without a lone last word', async ({
   page,
 }) => {
   await page.goto('/');
+  // Centred body text wraps in even lines too.
   const wraps = await page.locator('[data-panel-text]').evaluateAll((els) =>
-    els.map((el) => ({
-      heading: getComputedStyle(el.querySelector('h2, h3')!).textWrapStyle,
-      body: getComputedStyle(el.querySelector('p')!).textWrapStyle,
-    })),
+    els.map((el) => {
+      const p = el.querySelector('p')!;
+      return {
+        heading: getComputedStyle(el.querySelector('h2, h3')!).textWrapStyle,
+        body: getComputedStyle(p).textWrapStyle,
+        centred: getComputedStyle(p).textAlign === 'center',
+      };
+    }),
   );
   expect(wraps.length).toBeGreaterThan(0);
-  for (const w of wraps)
-    expect(w).toEqual({ heading: 'balance', body: 'pretty' });
+  expect(wraps.some((w) => w.centred)).toBe(true);
+  for (const { centred, ...w } of wraps)
+    expect(w).toEqual({
+      heading: 'balance',
+      body: centred ? 'balance' : 'pretty',
+    });
 });
 
 test('the words read in full ink, the price at body size', async ({ page }) => {
@@ -558,9 +567,11 @@ test('the story ends on a clear way to book', async ({ page }) => {
   const last = await page
     .locator('[data-scene="portfolio"]')
     .evaluate((section) => {
-      const blocks = [...section.children].filter(
-        (el) => el.tagName !== 'SCRIPT',
-      );
+      const blocks = [
+        ...section.querySelectorAll(
+          ':scope > [data-panel], :scope > [data-story-scene], :scope > [data-pair]',
+        ),
+      ];
       return blocks.at(-1)!.querySelectorAll('[data-closing] > a').length;
     });
   expect(last).toBe(1);
@@ -571,15 +582,225 @@ test('the story ends on a clear way to book', async ({ page }) => {
   expect(box.width).toBeGreaterThanOrEqual(240);
 });
 
-test('the closing calls her, with her number shown', async ({ page }) => {
-  // Built with playwright.config.ts's fake number.
+test('the closing opens a WhatsApp chat, with her number large to call', async ({
+  page,
+}) => {
+  // Built with playwright.config.ts's fake number and chat link.
   await page.goto('/');
-  const TEL = 'tel:+972500000000';
-  await expect(page.locator('[data-closing] > a')).toHaveAttribute('href', TEL);
-  const phone = page.locator('[data-closing] [data-phone]');
-  await expect(phone).toHaveText('050-000-0000');
-  await expect(phone).toHaveAttribute('href', TEL);
-  await expect(phone).toHaveAttribute('dir', 'ltr');
+  const chat = page.locator('[data-closing] > a');
+  expect(await chat.getAttribute('href')).toMatch(
+    /^https:\/\/wa\.me\/972500000000\?text=/,
+  );
+  await expect(chat).toHaveAttribute('target', '_blank');
+  expect(await chat.getAttribute('rel')).toContain('noopener');
+  await expect(chat).toContainText('וואטסאפ');
+  // Tapping the number opens the dialer, on iOS and Android alike.
+  const call = page.locator('[data-closing] [data-phone]');
+  await expect(call).toHaveAttribute('href', 'tel:+972500000000');
+  await expect(call.locator('bdi[dir="ltr"]')).toHaveText('050-000-0000');
+  const size = await call.evaluate((el) =>
+    parseFloat(getComputedStyle(el).fontSize),
+  );
+  expect(size).toBeGreaterThanOrEqual(
+    page.viewportSize()!.width >= 768 ? 48 : 30,
+  );
+  expect((await call.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+});
+
+test('the closing spray keeps clear of the actions', async ({ page }) => {
+  await page.goto('/');
+  const gap = await page.locator('[data-closing]').evaluate((closing) => {
+    const f = closing
+      .closest('[data-panel]')!
+      .querySelector('[data-flowers]')!
+      .getBoundingClientRect();
+    // Positive when the two boxes are apart along either axis.
+    const apart = (a: DOMRect) =>
+      Math.max(
+        a.left - f.right,
+        f.left - a.right,
+        a.top - f.bottom,
+        f.top - a.bottom,
+      );
+    return Math.min(
+      ...[...closing.querySelectorAll('a')].map((a) =>
+        apart(a.getBoundingClientRect()),
+      ),
+    );
+  });
+  expect(gap).toBeGreaterThanOrEqual(24);
+});
+
+/**
+ * Ink the closing's flowers lay near its words and actions once drawn: dark
+ * pixels within `margin` of each line of text and each action, one count per
+ * box.
+ */
+async function closingInk(page: Page) {
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  );
+  await page.waitForTimeout(2800);
+  const margin = page.viewportSize()!.width >= 768 ? 24 : 16;
+  // Every line of text and every action as laid out; then they go, so a
+  // screenshot shows only what lies around them.
+  const boxes = await page.locator('[data-closing]').evaluate((closing, m) => {
+    const rects: DOMRect[] = [];
+    for (const el of closing.querySelectorAll('h3, p')) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      rects.push(...range.getClientRects());
+    }
+    for (const a of closing.querySelectorAll('a'))
+      rects.push(a.getBoundingClientRect());
+    closing.closest<HTMLElement>('[data-panel-text]')!.style.visibility =
+      'hidden';
+    return rects.map((r) => ({
+      x: Math.max(r.x - m, 0),
+      y: Math.max(r.y - m, 0),
+      right: Math.min(r.right + m, innerWidth),
+      bottom: Math.min(r.bottom + m, innerHeight),
+    }));
+  }, margin);
+  const shot = (await page.screenshot()).toString('base64');
+  return page.evaluate(
+    async ({ shot, boxes }) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${shot}`;
+      await img.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const g = canvas.getContext('2d')!;
+      g.drawImage(img, 0, 0);
+      const k = img.width / innerWidth;
+      return boxes.map((b) => {
+        const d = g.getImageData(
+          b.x * k,
+          b.y * k,
+          (b.right - b.x) * k,
+          (b.bottom - b.y) * k,
+        );
+        let dark = 0;
+        for (let i = 0; i < d.data.length; i += 4)
+          if (d.data[i] + d.data[i + 1] + d.data[i + 2] < 600) dark++;
+        return dark;
+      });
+    },
+    { shot, boxes },
+  );
+}
+
+// A few specks of scan grain are allowed.
+test('the closing flowers keep clear of its words and actions', async ({
+  page,
+}) => {
+  for (const dark of await closingInk(page))
+    expect(dark).toBeLessThanOrEqual(8);
+});
+
+test('the closing flowers keep clear on a small laptop too', async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width < 1280, 'laptops only');
+  await page.setViewportSize({ width: 1280, height: 720 });
+  for (const dark of await closingInk(page))
+    expect(dark).toBeLessThanOrEqual(8);
+});
+
+test('on phones a WhatsApp tile shows between the first photo and the closing', async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width >= 768, 'phones only');
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  const tile = page.locator('[data-chat-tile]');
+  const shown = () =>
+    tile.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return s.visibility !== 'hidden' && Number(s.opacity) > 0.9;
+    });
+  expect(await shown()).toBe(false);
+  await placeTop(page, '[data-story-scene]', 0);
+  expect(await shown()).toBe(false);
+  await placeTop(page, '[data-panel]', -0.1, 1);
+  expect(await shown()).toBe(true);
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  );
+  await page.waitForTimeout(800);
+  expect(await shown()).toBe(false);
+  const link = tile.locator('a');
+  expect(await link.getAttribute('href')).toMatch(
+    /^https:\/\/wa\.me\/972500000000/,
+  );
+  await expect(link).toHaveAttribute('aria-label', /וואטסאפ/);
+});
+
+test('on phones the tile arrives once the first photo has gone, clear of the words', async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width >= 768, 'phones only');
+  await page.goto('/');
+  await page.waitForLoadState('load');
+  const panel = '[data-story-scene] ~ [data-panel]';
+  await placeTop(page, panel, 1);
+  // Scroll on in small steps until the tile shows.
+  const shown = () =>
+    page
+      .locator('[data-chat-tile]')
+      .evaluate((el) => getComputedStyle(el).visibility !== 'hidden');
+  for (let at = 1; at > -0.5 && !(await shown()); at -= 0.03) {
+    await page
+      .locator(panel)
+      .first()
+      .evaluate((el, at) => {
+        const top = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo(0, top - window.innerHeight * at);
+      }, at);
+    await page.waitForTimeout(300);
+  }
+  expect(await shown()).toBe(true);
+  await page.waitForTimeout(800);
+  const state = await page.evaluate(() => {
+    const tile = document
+      .querySelector('[data-chat-tile] a')!
+      .getBoundingClientRect();
+    // Lines of words on screen that the tile covers.
+    let covered = 0;
+    for (const el of document.querySelectorAll(
+      '[data-panel-text] :is(h2, h3, p)',
+    )) {
+      if (window.opacityOf(el) < 0.1) continue;
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      for (const r of range.getClientRects())
+        if (
+          r.right > tile.left &&
+          r.left < tile.right &&
+          r.bottom > tile.top &&
+          r.top < tile.bottom
+        )
+          covered++;
+    }
+    return {
+      photo: window.opacityOf(
+        document.querySelector('[data-story-scene] [data-fade]')!,
+      ),
+      covered,
+    };
+  });
+  expect(state.photo).toBeLessThan(0.05);
+  expect(state.covered).toBe(0);
+});
+
+test('no WhatsApp tile on tablets and desktops', async ({ page }) => {
+  test.skip(page.viewportSize()!.width < 768, 'tablets and desktops only');
+  await page.goto('/');
+  await placeTop(page, '[data-panel]', 0.2, 1);
+  await expect(page.locator('[data-chat-tile]')).toBeHidden();
 });
 
 test('the story reads top to bottom with JavaScript disabled', async ({
@@ -601,6 +822,10 @@ test('the story reads top to bottom with JavaScript disabled', async ({
     expect(l.position).not.toBe('fixed');
     expect(l.opacity).toBe(1);
   }
+  // No call to action leaks into the opening, and the closing keeps both.
+  await expect(page.locator('[data-chat-tile]')).toBeHidden();
+  await expect(page.locator('[data-closing] > a')).toBeVisible();
+  await expect(page.locator('[data-closing] [data-phone]')).toBeVisible();
   const reveals = await page
     .locator('[data-reveal]')
     .evaluateAll((els) =>

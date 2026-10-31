@@ -64,6 +64,8 @@ export interface StoryPair {
 export interface Action {
   label: string;
   href: string;
+  /** A WhatsApp chat: shown with its mark, opened in the app or a new tab. */
+  kind?: 'whatsapp';
 }
 
 /** The last words of the story, with the one clear action. */

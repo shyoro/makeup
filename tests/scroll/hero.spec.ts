@@ -60,9 +60,9 @@ test('the drawing draws in with a soft edge that comes off once drawn', async ({
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(await mask()).toContain('linear-gradient');
   // A moving mask re-rasterises every frame: none is left for scrolling.
+  // It waits for the drawing to load, then takes 1.8s: allow for a busy CPU.
   await page.waitForLoadState('load');
-  await page.waitForTimeout(3500);
-  expect(await mask()).toBe('none');
+  await expect.poll(mask, { timeout: 8000 }).toBe('none');
 });
 
 test('the scroll cue fades out with the name', async ({ page }) => {
